@@ -36,9 +36,11 @@ export async function rewriteSite(
 
 function rewriteColorsInDir(dir: string, colorMap: Map<string, string>, matches: (fileName: string) => boolean): void {
   if (!fs.existsSync(dir)) return;
-  for (const name of fs.readdirSync(dir)) {
+  for (const name of fs.readdirSync(dir, { recursive: true })) {
     if (!matches(name)) continue;
-    const filePath = path.join(dir, name);
+    const filePath = path.join(dir, name as string);
+    const stat = fs.statSync(filePath);
+    if (stat.isDirectory()) continue;
     const content = fs.readFileSync(filePath, 'utf-8');
     fs.writeFileSync(filePath, replaceColors(content, colorMap), 'utf-8');
   }
@@ -55,11 +57,12 @@ function rewritePagesDir(pagesDir: string, colorMap: Map<string, string>, copyCh
       .contents()
       .each((_, node) => {
         if (node.type !== 'text') return;
-        const text = (node as unknown as { data: string }).data;
-        const trimmed = text.trim();
-        if (trimmed && copyChanges[trimmed]) {
-          (node as unknown as { data: string }).data = text.replace(trimmed, copyChanges[trimmed]);
+        const textNode = node as unknown as { data: string };
+        let text = textNode.data;
+        for (const [original, replacement] of Object.entries(copyChanges)) {
+          text = text.split(original).join(replacement);
         }
+        textNode.data = text;
       });
 
     fs.writeFileSync(filePath, $.html(), 'utf-8');
@@ -69,7 +72,7 @@ function rewritePagesDir(pagesDir: string, colorMap: Map<string, string>, copyCh
 function replaceColors(content: string, colorMap: Map<string, string>): string {
   let result = content;
   for (const [oldHex, newHex] of colorMap) {
-    result = result.replaceAll(new RegExp(oldHex, 'gi'), newHex);
+    result = result.replaceAll(new RegExp(oldHex + '(?![0-9a-fA-F])', 'gi'), newHex);
   }
   return result;
 }
