@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "core",
-    "renderer"
+    "renderer",
+    "mcp-server"
   ],
   "scripts": {
     "postinstall": "prisma generate --schema prisma/schema.prisma",
