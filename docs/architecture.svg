@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1100" viewBox="0 0 1920 1100" role="img" aria-labelledby="title desc">
  <title id="title">Arquitetura — Pipeline de rebranding com IA</title>
- <desc id="desc">Chat with Claude via MCP server e Web UI Next.js convergem em core/pipeline. O fluxo segue por fetcher em Docker isolado, brand-analyzer, claude-rebrander e revisão humana na Web UI. A revisão retorna ao claude-rebrander para editar, ou aprova e segue para site-rewriter e exporter, com arquivo ZIP e prévia local.</desc>
+ <desc id="desc">Chat with Claude via MCP server aciona o core/pipeline. O fluxo segue por fetcher em Docker isolado, brand-analyzer, claude-rebrander e revisão humana na Web UI local. A revisão retorna ao claude-rebrander para editar, ou aprova e segue para site-rewriter e exporter, com arquivo ZIP e prévia local.</desc>
  <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1 1L8 5L1 9Z" fill="#A8B2C3"/></marker></defs>
  <style>text{font-family:'Nimbus Sans',Arial,sans-serif}.mono{font-family:'DejaVu Sans Mono',monospace}</style>
  <rect width="1920" height="1100" fill="#08090C"/>
@@ -28,8 +28,7 @@
 <text x="80" y="679" font-size="14" font-weight="400" fill="#818A9A" class="mono">06</text>
 <text x="115" y="679" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">EXPORTAÇÃO</text>
 <path d="M80 699H400" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
-<path d="M400 364H443Q462 364 462 383V465Q462 484 443 484H400" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-<path d="M462 440H552" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M400 440H552" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
 <path d="M880 440H1032" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
 <path d="M1360 440H1512" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
 <path d="M1680 528V712" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
@@ -39,18 +38,12 @@
 <path d="M1200 896V957Q1200 976 1219 976H1661Q1680 976 1680 957V896" fill="none" stroke="#8495B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 7"/>
 <text x="1440" y="959" font-size="17" font-weight="400" fill="#A7B5CE" text-anchor="middle">Editar proposta</text>
 <text x="960" y="790" font-size="16" font-weight="400" fill="#AAB4C4" text-anchor="middle">Aprovar</text>
-<rect x="80" y="320" width="320" height="88" rx="10" fill="#111317" stroke="#34383F"/>
-<g transform="translate(104 347)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="80" y="396" width="320" height="88" rx="10" fill="#111317" stroke="#34383F"/>
+<g transform="translate(104 423)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
 <path d="M4 3H25A3 3 0 0 1 28 6V20A3 3 0 0 1 25 23H12L5 29V23H4A3 3 0 0 1 1 20V6A3 3 0 0 1 4 3Z"/><path d="M7 10H22M7 16H18"/>
 </g>
-<text x="156" y="355" font-size="23" font-weight="500" fill="#ECEEF2" >Chat with Claude</text>
-<text x="156" y="383" font-size="17" font-weight="400" fill="#929AA8" >MCP server</text>
-<rect x="80" y="440" width="320" height="88" rx="10" fill="#111317" stroke="#34383F"/>
-<g transform="translate(104 467)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-<rect x="1" y="2" width="28" height="25" rx="3"/><path d="M1 9H29"/><circle cx="6" cy="5.5" r=".6"/><circle cx="10" cy="5.5" r=".6"/>
-</g>
-<text x="156" y="475" font-size="23" font-weight="500" fill="#ECEEF2" >Web UI</text>
-<text x="156" y="503" font-size="17" font-weight="400" fill="#929AA8" >Next.js</text>
+<text x="156" y="431" font-size="23" font-weight="500" fill="#ECEEF2" >Chat with Claude</text>
+<text x="156" y="459" font-size="17" font-weight="400" fill="#929AA8" >MCP server</text>
 <rect x="560" y="355" width="320" height="176" rx="12" fill="#020304"/>
  <rect x="560" y="352" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
  <path d="M573 352.5H867" stroke="#666D79" stroke-opacity=".32"/>

@@ -19,11 +19,9 @@ Paste a URL. Doppel crawls the site (falling back to a real headless browser for
 
 You then review Claude's proposal in the local web UI: the palette (hex list), the copy changes (old phrase → new phrase) and the SVG logo all come back as **editable text fields**, so you can tweak anything you don't like before applying it. Hit export and Doppel rewrites the site and shows it side by side with the original — two independently navigable preview frames — plus a downloadable `.zip` of the rebranded clone.
 
-Two ways to drive it:
-- **From a chat with Claude** (Claude Code or Claude Desktop) via the bundled MCP server — say "clone this site as Brand X" and it runs end to end.
-- **From the local web UI**, where you edit the rebrand and see it side by side with the original.
+Doppel is installed and driven entirely **from a chat with Claude** (Claude Code or Claude Desktop) via the bundled MCP server — say "clone this site as Brand X" and Claude bootstraps Docker/the local DB/the web UI on first run, then hands you a `localhost` link where you review and edit the rebrand side by side with the original.
 
-Everything runs on `localhost`. There is no hosted backend — you use your own Claude API usage, at your own cost.
+Everything runs on `localhost`, on your own machine. There is no hosted backend — you use your own Claude API usage, at your own cost.
 
 ## Why this exists
 
@@ -45,7 +43,7 @@ Job review — Claude's rebrand suggestions, editable before you apply them:
 
 ## Architecture
 
-<img src="docs/architecture.svg" alt="Doppel architecture: MCP server and Web UI feed core/pipeline, which runs fetcher (isolated Docker) → brand-analyzer → claude-rebrander, loops through human review in the Web UI, then site-rewriter → exporter" width="100%">
+<img src="docs/architecture.svg" alt="Doppel architecture: Chat with Claude via the MCP server drives core/pipeline, which runs fetcher (isolated Docker) → brand-analyzer → claude-rebrander, loops through human review in the local Web UI, then site-rewriter → exporter" width="100%">
 
 (Diagram labels are in Portuguese — full source: [docs/architecture.svg](docs/architecture.svg))
 
@@ -67,9 +65,11 @@ claude mcp add doppel -- node /absolute/path/to/doppel/mcp-server/dist/index.js
 ```
 > Doppel isn't on npm yet, so `npx doppel-mcp` won't work — point the MCP command at your local build instead. Publishing to npm is planned, not done.
 
-Then, in a chat: *"Clone https://example.com as a brand called Sorriso+, a dental clinic."* Claude prints the banner, bootstraps Docker/Playwright/the local DB on first run, and hands you a `localhost` link to review.
+Then, in a chat: *"Clone https://example.com as a brand called Sorriso+, a dental clinic."* Claude prints the banner, bootstraps Docker/Playwright/the local DB and the web app on first run, and hands you a `localhost` link to review — no separate terminal command needed.
 
-**Via the web app directly:**
+## Local development
+
+Working on Doppel's own code (not just using it)? Run the web app and its isolated preview server directly, without going through Claude/MCP:
 ```bash
 npm install
 docker build -f renderer/Dockerfile -t doppel-renderer .
@@ -77,7 +77,7 @@ npx prisma migrate deploy --schema prisma/schema.prisma
 npm run build
 ANTHROPIC_API_KEY=sk-... npm run dev -w web
 ```
-Make sure `ANTHROPIC_API_KEY` is set in your environment before starting — the Claude rebrand step needs it to function.
+Make sure `ANTHROPIC_API_KEY` is set in your environment before starting — the Claude rebrand step needs it to function. `npm run dev -w web` starts both the Next.js app and `preview-server.mjs` (the isolated origin cloned sites actually render in — see that file for why).
 
 ## Stack
 

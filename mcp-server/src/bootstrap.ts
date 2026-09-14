@@ -1,9 +1,39 @@
-import { exec as nodeExec } from 'node:child_process';
+import { exec as nodeExec, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
 const promisifiedExec = promisify(nodeExec);
+
+// Same default the MCP tools (tools.ts) use for the link they hand back, so a fresh install
+// spawns the web app on the exact port that link points at.
+const DEFAULT_WEB_BASE_URL = 'http://localhost:3000';
+const WEB_APP_POLL_INTERVAL_MS = 500;
+
+function defaultSpawnDetached(cmd: string, args: string[], options: { cwd: string; env: NodeJS.ProcessEnv }): void {
+  // detached + unref + stdio 'ignore': the web app (and its preview-server.mjs sibling,
+  // started together by `npm run dev -w web`) must keep running as a background service
+  // after this bootstrap call returns, independent of whatever tool call started it.
+  const child = spawn(cmd, args, {
+    cwd: options.cwd,
+    env: options.env,
+    detached: true,
+    stdio: 'ignore',
+    shell: process.platform === 'win32',
+  });
+  child.unref();
+}
+
+async function defaultCheckUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    // Any real HTTP response — even a 404 — means a server is actually listening and
+    // answering there; only a network-level failure (nothing listening yet) should retry.
+    return res.status < 500;
+  } catch {
+    return false;
+  }
+}
 
 // node's exec overloads widen stdout/stderr to string | Buffer once an options object is
 // passed; the bootstrap only ever cares whether the command succeeded, so normalize to
@@ -27,6 +57,7 @@ export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url
 export interface BootstrapResult {
   dockerReady: boolean;
   anthropicKeyPresent: boolean;
+  webAppReady: boolean;
   warnings: string[];
 }
 
@@ -40,6 +71,8 @@ export interface BootstrapDeps {
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   repoRoot?: string;
+  spawnDetached?: (cmd: string, args: string[], options: { cwd: string; env: NodeJS.ProcessEnv }) => void;
+  checkUrl?: (url: string) => Promise<boolean>;
 }
 
 const INSTALL_COMMANDS: Record<string, string> = {
@@ -86,7 +119,46 @@ export async function runBootstrap(deps: BootstrapDeps = {}): Promise<BootstrapR
   const migrated = await tryExec(exec, 'npx prisma migrate deploy --schema prisma/schema.prisma', timeoutMs, { cwd: repoRoot });
   if (!migrated) warnings.push('Falha ao rodar as migrations do banco local.');
 
-  return { dockerReady, anthropicKeyPresent, warnings };
+  // The MCP tools (tools.ts) hand back a `${WEB_BASE_URL}/jobs/<id>` link as soon as a clone
+  // finishes, so that link has to actually resolve to something — the web app (and its
+  // preview-server.mjs sibling, started together by `npm run dev -w web`) needs to already be
+  // running, or get started here. Without this, "install via Claude" would still require a
+  // manual `npm run dev -w web` from a terminal, which defeats the point of a chat-driven
+  // install.
+  const checkUrl = deps.checkUrl ?? defaultCheckUrl;
+  const spawnDetached = deps.spawnDetached ?? defaultSpawnDetached;
+  const webBaseUrl = env.DOPPEL_WEB_URL ?? DEFAULT_WEB_BASE_URL;
+
+  let webAppReady = await checkUrl(webBaseUrl);
+  if (!webAppReady) {
+    const webPort = new URL(webBaseUrl).port || '3000';
+    const previewPort = String(Number(webPort) + 1);
+    spawnDetached('npm', ['run', 'dev', '-w', 'web'], {
+      cwd: repoRoot,
+      env: { ...env, WEB_PORT: webPort, PREVIEW_PORT: previewPort },
+    });
+    webAppReady = await waitForReady(checkUrl, webBaseUrl, timeoutMs);
+    if (!webAppReady) {
+      warnings.push(
+        `Não consegui confirmar que a UI web subiu em ${webBaseUrl} a tempo. Se o link não abrir, rode "npm run dev -w web" manualmente.`,
+      );
+    }
+  }
+
+  return { dockerReady, anthropicKeyPresent, webAppReady, warnings };
+}
+
+async function waitForReady(
+  checkUrl: NonNullable<BootstrapDeps['checkUrl']>,
+  url: string,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await checkUrl(url)) return true;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(WEB_APP_POLL_INTERVAL_MS, Math.max(deadline - Date.now(), 0))));
+  }
+  return checkUrl(url);
 }
 
 async function tryExec(
