@@ -35,4 +35,13 @@ describe('runBootstrap', () => {
     expect(result.warnings.some((w) => w.includes('Docker'))).toBe(true);
     expect(exec).toHaveBeenCalledWith(expect.stringContaining('winget install'));
   });
+
+  it('times out and resolves (without hanging) when an exec call never returns', async () => {
+    const exec = vi.fn().mockImplementation(() => new Promise(() => {})); // never resolves
+    const result = await runBootstrap({ exec, platform: 'linux', env: { ANTHROPIC_API_KEY: 'sk-ant-test' }, timeoutMs: 50 });
+
+    expect(result.dockerReady).toBe(false);
+    expect(result.anthropicKeyPresent).toBe(true);
+    expect(result.warnings.some((w) => w.includes('Docker'))).toBe(true);
+  });
 });
