@@ -36,9 +36,9 @@ export async function rewriteSite(
 
 function rewriteColorsInDir(dir: string, colorMap: Map<string, string>, matches: (fileName: string) => boolean): void {
   if (!fs.existsSync(dir)) return;
-  for (const name of fs.readdirSync(dir, { recursive: true })) {
+  for (const name of fs.readdirSync(dir, { recursive: true, encoding: 'utf-8' })) {
     if (!matches(name)) continue;
-    const filePath = path.join(dir, name as string);
+    const filePath = path.join(dir, name);
     const stat = fs.statSync(filePath);
     if (stat.isDirectory()) continue;
     const content = fs.readFileSync(filePath, 'utf-8');

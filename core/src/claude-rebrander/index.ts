@@ -70,7 +70,7 @@ export async function rebrandSite(
   });
 
   const toolUse = response.content.find(
-    (block: { type: string }): block is { type: 'tool_use'; input: unknown } => block.type === 'tool_use',
+    (block): block is Anthropic.Messages.ToolUseBlock => block.type === 'tool_use',
   );
   if (!toolUse) throw new RebrandParseError('Claude did not return a submit_rebrand tool call');
 
