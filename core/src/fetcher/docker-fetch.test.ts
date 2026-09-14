@@ -1,0 +1,51 @@
+import { describe, it, expect, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { EventEmitter } from 'node:events';
+import { fetchSiteViaDocker, DockerUnavailableError } from './docker-fetch.js';
+
+function fakeSpawn(exitCode: number, onSpawn?: (args: string[]) => void) {
+  return vi.fn((_cmd: string, args: string[]) => {
+    onSpawn?.(args);
+    const child = new EventEmitter() as any;
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    setTimeout(() => child.emit('close', exitCode), 0);
+    return child;
+  });
+}
+
+describe('fetchSiteViaDocker', () => {
+  it('runs docker with a volume mount and parses the manifest written by the container', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    let capturedArgs: string[] = [];
+    const spawnFn = fakeSpawn(0, (args) => {
+      capturedArgs = args;
+      const mountArg = args.find((a) => a.includes(':/data'));
+      const hostDir = mountArg?.split(':/data')[0] ?? '';
+      fs.mkdirSync(path.join(hostDir, 'pages'), { recursive: true });
+      fs.writeFileSync(path.join(hostDir, 'pages', 'page-0.html'), '<html>ok</html>');
+      fs.writeFileSync(
+        path.join(hostDir, 'manifest.json'),
+        JSON.stringify({ pages: [{ url: 'https://example.com', htmlPath: 'pages/page-0.html', usedRenderer: 'static' }] }),
+      );
+    });
+
+    const result = await fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir });
+
+    expect(result.workDir).toBe(workDir);
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0].html).toBe('<html>ok</html>');
+    expect(capturedArgs).toContain('doppel-renderer');
+    expect(capturedArgs.join(' ')).toContain('--maxPages 20');
+  });
+
+  it('throws DockerUnavailableError when docker exits non-zero', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    const spawnFn = fakeSpawn(1);
+    await expect(fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir })).rejects.toBeInstanceOf(
+      DockerUnavailableError,
+    );
+  });
+});
