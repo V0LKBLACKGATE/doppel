@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1100" viewBox="0 0 1920 1100" role="img" aria-labelledby="title desc">
+ <title id="title">Arquitetura — Pipeline de rebranding com IA</title>
+ <desc id="desc">Chat with Claude via MCP server e Web UI Next.js convergem em core/pipeline. O fluxo segue por fetcher em Docker isolado, brand-analyzer, claude-rebrander e revisão humana na Web UI. A revisão retorna ao claude-rebrander para editar, ou aprova e segue para site-rewriter e exporter, com arquivo ZIP e prévia local.</desc>
+ <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M1 1L8 5L1 9Z" fill="#A8B2C3"/></marker></defs>
+ <style>text{font-family:'Nimbus Sans',Arial,sans-serif}.mono{font-family:'DejaVu Sans Mono',monospace}</style>
+ <rect width="1920" height="1100" fill="#08090C"/>
+
+<text x="80" y="116" font-size="58" font-weight="500" fill="#F4F5F7" letter-spacing="-1.6">Arquitetura</text>
+<text x="80" y="162" font-size="23" font-weight="400" fill="#979FAD" >Pipeline de rebranding com IA</text>
+<path d="M80 210H1840" fill="none" stroke="#2E323A" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<rect x="1008" y="247" width="864" height="327" rx="16" fill="#0B0D11" stroke="#222731"/>
+<rect x="1008" y="635" width="864" height="385" rx="16" fill="#0C0F15" stroke="#2C3443"/>
+<text x="80" y="289" font-size="14" font-weight="400" fill="#818A9A" class="mono">01</text>
+<text x="115" y="289" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">ENTRADA</text>
+<path d="M80 309H400" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<text x="560" y="289" font-size="14" font-weight="400" fill="#818A9A" class="mono">02</text>
+<text x="595" y="289" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">ORQUESTRAÇÃO</text>
+<path d="M560 309H880" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<text x="1040" y="289" font-size="14" font-weight="400" fill="#818A9A" class="mono">03</text>
+<text x="1075" y="289" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">COLETA E ANÁLISE</text>
+<path d="M1040 309H1840" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<text x="1040" y="679" font-size="14" font-weight="400" fill="#818A9A" class="mono">04</text>
+<text x="1075" y="679" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">IA E VALIDAÇÃO</text>
+<path d="M1040 699H1840" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<text x="560" y="679" font-size="14" font-weight="400" fill="#818A9A" class="mono">05</text>
+<text x="595" y="679" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">REESCRITA</text>
+<path d="M560 699H880" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<text x="80" y="679" font-size="14" font-weight="400" fill="#818A9A" class="mono">06</text>
+<text x="115" y="679" font-size="14" font-weight="500" fill="#A3ABB8" letter-spacing="1.9">EXPORTAÇÃO</text>
+<path d="M80 699H400" fill="none" stroke="#262A31" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
+<path d="M400 364H443Q462 364 462 383V465Q462 484 443 484H400" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+<path d="M462 440H552" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M880 440H1032" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M1360 440H1512" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M1680 528V712" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M1520 808H1368" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M1040 808H888" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M560 808H408" fill="none" stroke="#858D9B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" />
+<path d="M1200 896V957Q1200 976 1219 976H1661Q1680 976 1680 957V896" fill="none" stroke="#8495B3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)" stroke-dasharray="6 7"/>
+<text x="1440" y="959" font-size="17" font-weight="400" fill="#A7B5CE" text-anchor="middle">Editar proposta</text>
+<text x="960" y="790" font-size="16" font-weight="400" fill="#AAB4C4" text-anchor="middle">Aprovar</text>
+<rect x="80" y="320" width="320" height="88" rx="10" fill="#111317" stroke="#34383F"/>
+<g transform="translate(104 347)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M4 3H25A3 3 0 0 1 28 6V20A3 3 0 0 1 25 23H12L5 29V23H4A3 3 0 0 1 1 20V6A3 3 0 0 1 4 3Z"/><path d="M7 10H22M7 16H18"/>
+</g>
+<text x="156" y="355" font-size="23" font-weight="500" fill="#ECEEF2" >Chat with Claude</text>
+<text x="156" y="383" font-size="17" font-weight="400" fill="#929AA8" >MCP server</text>
+<rect x="80" y="440" width="320" height="88" rx="10" fill="#111317" stroke="#34383F"/>
+<g transform="translate(104 467)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="1" y="2" width="28" height="25" rx="3"/><path d="M1 9H29"/><circle cx="6" cy="5.5" r=".6"/><circle cx="10" cy="5.5" r=".6"/>
+</g>
+<text x="156" y="475" font-size="23" font-weight="500" fill="#ECEEF2" >Web UI</text>
+<text x="156" y="503" font-size="17" font-weight="400" fill="#929AA8" >Next.js</text>
+<rect x="560" y="355" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="560" y="352" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M573 352.5H867" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(586 377)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="1" y="10" width="8" height="9" rx="1.5"/><rect x="21" y="1" width="8" height="9" rx="1.5"/><rect x="21" y="20" width="8" height="9" rx="1.5"/><path d="M9 14.5H15V5.5H21M15 14.5V24.5H21"/>
+</g>
+<text x="586" y="450" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">core/pipeline</text>
+<text x="586" y="488" font-size="18" font-weight="400" fill="#A2AAB7" >Orquestração do fluxo</text>
+<rect x="1040" y="355" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="1040" y="352" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M1053 352.5H1347" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(1066 377)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M15 1L28 8V23L15 30L2 23V8Z"/><path d="M2 8L15 15L28 8M15 15V30M8 4.5L21 11.5"/>
+</g>
+<text x="1066" y="450" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">fetcher</text>
+<text x="1066" y="488" font-size="18" font-weight="400" fill="#A2AAB7" >Docker isolado</text>
+<rect x="1520" y="355" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="1520" y="352" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M1533 352.5H1827" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(1546 377)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M3 2V28H29M10 21V14M18 21V7M26 21V2"/>
+</g>
+<text x="1546" y="450" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">brand-analyzer</text>
+<text x="1546" y="488" font-size="18" font-weight="400" fill="#A2AAB7" >Análise da marca</text>
+<rect x="1520" y="723" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="1520" y="720" width="320" height="176" rx="12" fill="#121722" stroke="#50617E"/>
+ <path d="M1533 720.5H1827" stroke="#899CC0" stroke-opacity=".32"/>
+<g transform="translate(1546 745)" fill="none" stroke="#BFCEE8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="6" y="6" width="19" height="19" rx="3"/><path d="M11 1V6M20 1V6M11 25V30M20 25V30M1 11H6M1 20H6M25 11H30M25 20H30"/><path d="M11 20L15.5 10L20 20M12.8 16.5H18.2"/>
+</g>
+<text x="1546" y="818" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">claude-rebrander</text>
+<text x="1546" y="856" font-size="18" font-weight="400" fill="#A2AAB7" >Paleta, copy e logo SVG</text>
+<rect x="1771" y="745" width="43" height="25" rx="5" fill="#26344C"/>
+<text x="1792.5" y="762" font-size="13" font-weight="500" fill="#CEDAF0" text-anchor="middle">IA</text>
+<rect x="1040" y="723" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="1040" y="720" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M1053 720.5H1347" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(1066 745)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M15 1L28 14L15 29L2 14Z"/><path d="M9 14L13 18L21 10"/>
+</g>
+<text x="1066" y="818" font-size="27" font-weight="500" fill="#F0F1F4" >Revisão humana</text>
+<text x="1066" y="856" font-size="18" font-weight="400" fill="#A2AAB7" >Na Web UI</text>
+<rect x="560" y="723" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="560" y="720" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M573 720.5H867" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(586 745)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<rect x="1" y="2" width="29" height="26" rx="3"/><path d="M11 9L6 15L11 21M20 9L25 15L20 21M17 8L14 22"/>
+</g>
+<text x="586" y="818" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">site-rewriter</text>
+<text x="586" y="856" font-size="18" font-weight="400" fill="#A2AAB7" >Reescrita do site</text>
+<rect x="80" y="723" width="320" height="176" rx="12" fill="#020304"/>
+ <rect x="80" y="720" width="320" height="176" rx="12" fill="#111317" stroke="#3B4049"/>
+ <path d="M93 720.5H387" stroke="#666D79" stroke-opacity=".32"/>
+<g transform="translate(106 745)" fill="none" stroke="#ABB1BD" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+<path d="M6 1H21L28 8V28H6Z"/><path d="M21 1V8H28M2 16H20M15 11L20 16L15 21"/>
+</g>
+<text x="106" y="818" font-size="23" font-weight="500" fill="#F0F1F4" class="mono">exporter</text>
+<text x="106" y="856" font-size="18" font-weight="400" fill="#A2AAB7" >.zip + prévia local</text>
+</svg>

@@ -45,22 +45,9 @@ Job review — Claude's rebrand suggestions, editable before you apply them:
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph Entrada
-        A[Chat with Claude<br/>MCP server] --> C
-        B[Web UI<br/>Next.js] --> C
-    end
-    C[core/pipeline] --> D[fetcher<br/>isolated Docker]
-    D --> E[brand-analyzer]
-    E --> F[claude-rebrander<br/>palette + copy + SVG logo]
-    F --> G{Human review<br/>in the Web UI}
-    G -->|edit| F
-    G -->|approve| H[site-rewriter]
-    H --> I[exporter<br/>.zip + local preview]
-```
+<img src="docs/architecture.svg" alt="Doppel architecture: MCP server and Web UI feed core/pipeline, which runs fetcher (isolated Docker) → brand-analyzer → claude-rebrander, loops through human review in the Web UI, then site-rewriter → exporter" width="100%">
 
-Full diagram source: [docs/architecture-diagram.md](docs/architecture-diagram.md)
+(Diagram labels are in Portuguese — full source: [docs/architecture.svg](docs/architecture.svg))
 
 ## Responsible use
 

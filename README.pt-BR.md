@@ -45,22 +45,9 @@ Revisão do job — sugestões de rebrand do Claude, editáveis antes de aplicar
 
 ## Arquitetura
 
-```mermaid
-flowchart TB
-    subgraph Entrada
-        A[Chat com o Claude<br/>MCP server] --> C
-        B[UI Web<br/>Next.js] --> C
-    end
-    C[core/pipeline] --> D[fetcher<br/>Docker isolado]
-    D --> E[brand-analyzer]
-    E --> F[claude-rebrander<br/>paleta + copy + logo SVG]
-    F --> G{Revisão humana<br/>na UI Web}
-    G -->|editar| F
-    G -->|aprovar| H[site-rewriter]
-    H --> I[exporter<br/>.zip + preview local]
-```
+<img src="docs/architecture.svg" alt="Arquitetura do Doppel: servidor MCP e UI Web alimentam o core/pipeline, que roda fetcher (Docker isolado) → brand-analyzer → claude-rebrander, passa pela revisão humana na UI Web, e segue para site-rewriter → exporter" width="100%">
 
-Código completo do diagrama: [docs/architecture-diagram.md](docs/architecture-diagram.md)
+Código completo do diagrama: [docs/architecture.svg](docs/architecture.svg)
 
 ## Uso responsável
 
