@@ -29,4 +29,22 @@ describe('exportSite', () => {
     const entryNames = zip.getEntries().map((e) => e.entryName);
     expect(entryNames).toContain('pages/page-0.html');
   });
+
+  it('rejects when output directory does not exist', async () => {
+    const nonexistentDir = path.join(os.tmpdir(), 'doppel-nonexistent-' + Date.now());
+    const badZipPath = path.join(nonexistentDir, 'export.zip');
+
+    await expect(exportSite(rewrittenDir, badZipPath)).rejects.toThrow();
+  });
+
+  it('rejects when rewrittenDir does not exist', async () => {
+    const nonexistentRewrittenDir = path.join(os.tmpdir(), 'doppel-nonexistent-rewritten-' + Date.now());
+    const tempZipPath = path.join(os.tmpdir(), 'export-' + Date.now() + '.zip');
+
+    try {
+      await expect(exportSite(nonexistentRewrittenDir, tempZipPath)).rejects.toThrow(/rewrittenDir does not exist/);
+    } finally {
+      fs.rmSync(tempZipPath, { force: true });
+    }
+  });
 });
