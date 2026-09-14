@@ -6,21 +6,38 @@ import { useRouter } from 'next/navigation';
 export default function NewCloneForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     const form = new FormData(e.currentTarget);
-    const res = await fetch('/api/clones', {
-      method: 'POST',
-      body: JSON.stringify({
-        url: form.get('url'),
-        brandName: form.get('brandName'),
-        niche: form.get('niche') || undefined,
-      }),
-    });
-    const { jobId } = await res.json();
-    router.push(`/jobs/${jobId}`);
+    try {
+      const res = await fetch('/api/clones', {
+        method: 'POST',
+        body: JSON.stringify({
+          url: form.get('url'),
+          brandName: form.get('brandName'),
+          niche: form.get('niche') || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`A clonagem falhou (HTTP ${res.status}). Verifique a URL e tente novamente.`);
+      }
+
+      const data = await res.json();
+      if (!data.jobId) {
+        throw new Error('Resposta inesperada do servidor: nenhum job foi criado.');
+      }
+
+      router.push(`/jobs/${data.jobId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível iniciar a clonagem. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -31,6 +48,7 @@ export default function NewCloneForm() {
       <button type="submit" disabled={loading} className="rounded bg-emerald-600 px-4 py-2 font-medium disabled:opacity-50">
         {loading ? 'Clonando…' : 'Clonar site'}
       </button>
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </form>
   );
 }
