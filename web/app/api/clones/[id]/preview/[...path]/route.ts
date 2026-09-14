@@ -11,17 +11,22 @@ const CONTENT_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
 };
 
-export async function GET(_request: Request, { params }: { params: { id: string; path: string[] } }) {
+// Next.js 15 Route Handlers receive dynamic segment params as a Promise (async APIs),
+// not a plain object. The destructured field is renamed to `pathSegments` to avoid
+// shadowing the `path` module imported above.
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string; path: string[] }> }) {
+  const { id, path: pathSegments } = await params;
+
   let job;
   try {
-    job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: params.id } });
+    job = await prisma.cloneJob.findUniqueOrThrow({ where: { id } });
   } catch {
     return new Response('Not found', { status: 404 });
   }
   if (!job.previewPath) return new Response('Not found', { status: 404 });
 
   const root = path.resolve(job.previewPath);
-  const requested = path.resolve(root, ...params.path);
+  const requested = path.resolve(root, ...pathSegments);
 
   if (!requested.startsWith(root + path.sep) && requested !== root) {
     return new Response('Not found', { status: 404 });

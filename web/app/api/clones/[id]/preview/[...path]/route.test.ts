@@ -19,7 +19,7 @@ describe('/api/clones/[id]/preview/[...path]', () => {
   it('serves a file that exists inside previewPath', async () => {
     vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
 
-    const response = await GET(new Request('http://localhost/x'), { params: { id: 'job1', path: ['pages', 'page-0.html'] } });
+    const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'job1', path: ['pages', 'page-0.html'] }) });
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('<html>hi</html>');
   });
@@ -27,14 +27,14 @@ describe('/api/clones/[id]/preview/[...path]', () => {
   it('returns 404 for a path-traversal attempt', async () => {
     vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
 
-    const response = await GET(new Request('http://localhost/x'), { params: { id: 'job1', path: ['..', '..', 'etc', 'passwd'] } });
+    const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'job1', path: ['..', '..', 'etc', 'passwd'] }) });
     expect(response.status).toBe(404);
   });
 
   it('returns 404 when the job id does not exist', async () => {
     vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockRejectedValue(new Error('No CloneJob found'));
 
-    const response = await GET(new Request('http://localhost/x'), { params: { id: 'missing-job', path: ['pages', 'page-0.html'] } });
+    const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'missing-job', path: ['pages', 'page-0.html'] }) });
     expect(response.status).toBe(404);
   });
 });

@@ -12,7 +12,7 @@ describe('/api/clones/[id]/apply', () => {
       method: 'POST',
       body: JSON.stringify({ copyChanges: { Welcome: 'Bem-vindo (editado)' } }),
     });
-    const response = await POST(request, { params: { id: 'job1' } });
+    const response = await POST(request, { params: Promise.resolve({ id: 'job1' }) });
     const body = await response.json();
 
     expect(updateSpy).toHaveBeenCalledWith(
@@ -29,7 +29,7 @@ describe('/api/clones/[id]/apply', () => {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    const response = await POST(request, { params: { id: 'missing-job' } });
+    const response = await POST(request, { params: Promise.resolve({ id: 'missing-job' }) });
 
     expect(response.status).toBe(404);
     const body = await response.json();
