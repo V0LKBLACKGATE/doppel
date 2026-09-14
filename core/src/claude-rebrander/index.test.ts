@@ -51,4 +51,16 @@ describe('rebrandSite', () => {
       RebrandParseError,
     );
   });
+
+  it('throws RebrandParseError when colorPalette has wrong length', async () => {
+    const client = fakeClient({
+      colorPalette: ['#7c3aed', '#ff0000'], // 2 colors instead of 1
+      copyChanges: { Welcome: 'Bem-vindo' },
+      logoSvg: '<svg><text>SR</text></svg>',
+    });
+
+    await expect(rebrandSite(profile, ['Welcome'], 'Sorriso+', 'clínica odontológica', { client })).rejects.toThrow(
+      /Claude returned 2 colors, expected 1/,
+    );
+  });
 });

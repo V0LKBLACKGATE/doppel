@@ -74,5 +74,38 @@ export async function rebrandSite(
   );
   if (!toolUse) throw new RebrandParseError('Claude did not return a submit_rebrand tool call');
 
-  return toolUse.input as RebrandResult;
+  // Validate the shape of the response
+  const input = toolUse.input as Record<string, unknown>;
+
+  // Validate colorPalette
+  if (!Array.isArray(input.colorPalette)) {
+    throw new RebrandParseError('Claude returned colorPalette that is not an array');
+  }
+  if (input.colorPalette.length !== profile.dominantColors.length) {
+    throw new RebrandParseError(
+      `Claude returned ${input.colorPalette.length} colors, expected ${profile.dominantColors.length}`,
+    );
+  }
+  if (!input.colorPalette.every((color) => typeof color === 'string')) {
+    throw new RebrandParseError('Claude returned colorPalette with non-string values');
+  }
+
+  // Validate copyChanges
+  if (typeof input.copyChanges !== 'object' || input.copyChanges === null || Array.isArray(input.copyChanges)) {
+    throw new RebrandParseError('Claude returned copyChanges that is not a plain object');
+  }
+  if (!Object.entries(input.copyChanges).every(([k, v]) => typeof k === 'string' && typeof v === 'string')) {
+    throw new RebrandParseError('Claude returned copyChanges with non-string keys or values');
+  }
+
+  // Validate logoSvg
+  if (typeof input.logoSvg !== 'string' || input.logoSvg.trim().length === 0) {
+    throw new RebrandParseError('Claude returned logoSvg that is not a non-empty string');
+  }
+
+  return {
+    colorPalette: input.colorPalette,
+    copyChanges: input.copyChanges as Record<string, string>,
+    logoSvg: input.logoSvg,
+  };
 }
