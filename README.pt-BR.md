@@ -15,13 +15,13 @@ Desenvolvido por **VØLK // BLACKGATE** — [@V0LKBLACKGATE](https://github.com/
 
 ## O que faz
 
-Cole uma URL. O Doppel rastreia o site (com fallback para browser headless de verdade em páginas com JS pesado), identifica logo/cores/nome, e pede pro Claude desenhar um rebrand completo — paleta nova, textos reescritos, logo novo em SVG — para a marca/nicho que você informar.
+Cole uma URL. O Doppel rastreia o site (com fallback para browser headless de verdade em páginas com JS pesado), identifica logo/cores/nome, e pede pro Claude desenhar um rebrand completo — paleta nova, textos reescritos, logo novo em SVG — para a marca/nicho que você informar. O site clonado já aparece num preview navegável assim que termina de rastrear, pra você confirmar que a clonagem funcionou antes de decidir qualquer coisa sobre o rebrand.
 
-Aí você revisa a proposta do Claude na UI web local: a paleta (lista de hex), as trocas de texto (frase antiga → frase nova) e o SVG do logo voltam como **campos de texto editáveis**, então dá pra ajustar o que quiser antes de aplicar. Ao exportar, o Doppel reescreve o site, mostra o resultado num frame de preview e te entrega um `.zip` do clone rebrandado. (A comparação é antes/depois no tempo — as páginas rebrandadas aparecem depois da exportação; ainda não existe uma visão lado a lado com o original.)
+Aí você revisa a proposta do Claude na UI web local: a paleta (lista de hex), as trocas de texto (frase antiga → frase nova) e o SVG do logo voltam como **campos de texto editáveis**, então dá pra ajustar o que quiser antes de aplicar. Ao exportar, o Doppel reescreve o site e mostra lado a lado com o original — dois previews navegáveis de forma independente — além de um `.zip` do clone rebrandado pra baixar.
 
 Duas formas de usar:
 - **Direto de uma conversa com o Claude** (Claude Code ou Claude Desktop), via o servidor MCP incluído — peça "clona esse site como a Marca X" e ele roda o fluxo inteiro.
-- **Pela UI web local**, onde você edita o rebrand e vê o preview do resultado exportado.
+- **Pela UI web local**, onde você edita o rebrand e vê lado a lado com o original.
 
 Tudo roda em `localhost`. Não existe backend hospedado — o uso da API do Claude é seu, com seu próprio custo.
 

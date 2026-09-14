@@ -7,14 +7,41 @@ import { GET } from './route.js';
 
 describe('/api/clones/[id]/preview/[...path]', () => {
   let previewPath: string;
+  let sourcePreviewPath: string;
 
   beforeAll(() => {
     previewPath = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-preview-'));
     fs.mkdirSync(path.join(previewPath, 'pages'));
     fs.writeFileSync(path.join(previewPath, 'pages', 'page-0.html'), '<html>hi</html>');
+
+    sourcePreviewPath = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-source-preview-'));
+    fs.mkdirSync(path.join(sourcePreviewPath, 'pages'));
+    fs.writeFileSync(path.join(sourcePreviewPath, 'pages', 'page-0.html'), '<html>original</html>');
   });
 
-  afterAll(() => fs.rmSync(previewPath, { recursive: true, force: true }));
+  afterAll(() => {
+    fs.rmSync(previewPath, { recursive: true, force: true });
+    fs.rmSync(sourcePreviewPath, { recursive: true, force: true });
+  });
+
+  it('serves the original site when ?kind=source, even after previewPath has moved on to the rebranded output', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath, sourcePreviewPath } as any);
+
+    const response = await GET(new Request('http://localhost/x?kind=source'), {
+      params: Promise.resolve({ id: 'job1', path: ['pages', 'page-0.html'] }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('<html>original</html>');
+  });
+
+  it('returns 404 for ?kind=source when the job has no sourcePreviewPath yet', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath, sourcePreviewPath: null } as any);
+
+    const response = await GET(new Request('http://localhost/x?kind=source'), {
+      params: Promise.resolve({ id: 'job1', path: ['pages', 'page-0.html'] }),
+    });
+    expect(response.status).toBe(404);
+  });
 
   it('serves a file that exists inside previewPath', async () => {
     vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);

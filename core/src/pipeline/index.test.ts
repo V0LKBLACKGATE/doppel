@@ -24,6 +24,15 @@ describe('pipeline', () => {
     expect(job.status).toBe('pronto_para_revisao');
     expect(job.errorReason).toBeNull();
     expect(JSON.parse(job.colorPalette ?? '[]')).toEqual(['#7c3aed']);
+    expect(job.sourcePreviewPath).toBe('/tmp/doppel-fake-job');
+  });
+
+  it('keeps sourcePreviewPath pointing at the original after export overwrites previewPath', async () => {
+    const job = await runClonePipeline('https://acme.example', 'Sorriso+', undefined, fakeDeps);
+    const exported = await applyAndExport(job.id, fakeDeps);
+    expect(exported.sourcePreviewPath).toBe('/tmp/doppel-fake-job');
+    expect(exported.previewPath).toBe('/tmp/doppel-fake-job/rewritten');
+    expect(exported.previewPath).not.toBe(exported.sourcePreviewPath);
   });
 
   it('sets status=erro with a reason when a stage throws', async () => {

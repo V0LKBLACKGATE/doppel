@@ -14,7 +14,7 @@ const CONTENT_TYPES: Record<string, string> = {
 // Next.js 15 Route Handlers receive dynamic segment params as a Promise (async APIs),
 // not a plain object. The destructured field is renamed to `pathSegments` to avoid
 // shadowing the `path` module imported above.
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string; path: string[] }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string; path: string[] }> }) {
   const { id, path: pathSegments } = await params;
 
   let job;
@@ -23,9 +23,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   } catch {
     return new Response('Not found', { status: 404 });
   }
-  if (!job.previewPath) return new Response('Not found', { status: 404 });
 
-  const root = path.resolve(job.previewPath);
+  // ?kind=source serves the ORIGINAL crawled site (job.sourcePreviewPath), which is set once
+  // right after fetch and never overwritten. Default (no kind, or kind=output) keeps serving
+  // job.previewPath — the rebranded output once exported, or the original before that.
+  const kind = new URL(request.url).searchParams.get('kind');
+  const previewPath = kind === 'source' ? job.sourcePreviewPath : job.previewPath;
+  if (!previewPath) return new Response('Not found', { status: 404 });
+
+  const root = path.resolve(previewPath);
   const requested = path.resolve(root, ...pathSegments);
 
   if (!requested.startsWith(root + path.sep) && requested !== root) {

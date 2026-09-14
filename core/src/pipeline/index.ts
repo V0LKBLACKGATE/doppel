@@ -55,7 +55,10 @@ export async function runClonePipeline(
   try {
     const { workDir, pages } = await fetchSite(sourceUrl, 20);
     jobWorkDirs.set(job.id, workDir);
-    job = await prisma.cloneJob.update({ where: { id: job.id }, data: { status: 'analyzing', previewPath: workDir } });
+    job = await prisma.cloneJob.update({
+      where: { id: job.id },
+      data: { status: 'analyzing', previewPath: workDir, sourcePreviewPath: workDir },
+    });
 
     const profile = analyze(pages);
     job = await prisma.cloneJob.update({

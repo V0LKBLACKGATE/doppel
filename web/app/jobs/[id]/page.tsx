@@ -28,13 +28,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     throw err;
   }
 
-  let pages: { url: string; htmlPath: string }[] = [];
-  if (job.previewPath) {
-    const manifestPath = path.join(job.previewPath, 'manifest.json');
-    if (fs.existsSync(manifestPath)) {
-      pages = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')).pages;
-    }
-  }
+  const readManifest = (dir: string | null): { url: string; htmlPath: string }[] => {
+    if (!dir) return [];
+    const manifestPath = path.join(dir, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) return [];
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf-8')).pages;
+  };
+
+  // sourcePreviewPath is set once right after fetch and never overwritten, so the ORIGINAL
+  // crawled site stays previewable even after export moves previewPath on to the rebranded
+  // output — this is what actually lets you SEE what got cloned, not just edit hex codes blind.
+  const sourcePages = readManifest(job.sourcePreviewPath);
+  const outputPages = job.status === 'exportado' ? readManifest(job.previewPath) : [];
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -56,39 +61,84 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         />
       )}
 
-      {job.status === 'exportado' && pages.length > 0 && (
-        <div className="mt-8">
-          <div className="mb-3 flex flex-wrap gap-2">
-            {pages.map((p, i) => (
-              <a
-                key={p.htmlPath}
-                href={`/api/clones/${job.id}/preview/${p.htmlPath}`}
-                target="doppel-preview-frame"
-                className="rounded border border-neutral-700 px-3 py-1 text-xs"
-              >
-                Página {i + 1}
-              </a>
-            ))}
-            <a href={`/api/clones/${job.id}/export`} className="ml-auto rounded bg-emerald-600 px-3 py-1 text-xs font-medium">
-              Baixar .zip
-            </a>
-          </div>
-          {/* The preview renders a CLONED third-party site: its original HTML and its own
-              downloaded/localized JS. Served from /api/clones/... it would otherwise run at
-              the exact same origin as Doppel itself (localhost:3000), where a hostile script
-              in the cloned page could call Doppel's own API routes with the viewer's session.
-              `sandbox="allow-scripts"` (deliberately WITHOUT allow-same-origin) puts the frame
-              in an opaque origin: scripts still run, so the clone still looks right, but it
-              can't touch the parent's cookies/storage/DOM, call our API as the user, or
-              navigate the top-level page. The preview route sends a matching CSP header. */}
-          <iframe
-            name="doppel-preview-frame"
-            sandbox="allow-scripts"
-            src={`/api/clones/${job.id}/preview/${pages[0].htmlPath}`}
-            className="h-[70vh] w-full rounded border border-neutral-800 bg-white"
-          />
+      {job.status === 'exportado' && outputPages.length > 0 && (
+        <div className="mt-6 flex justify-end">
+          <a href={`/api/clones/${job.id}/export`} className="rounded bg-emerald-600 px-3 py-1 text-xs font-medium">
+            Baixar .zip
+          </a>
+        </div>
+      )}
+
+      {(sourcePages.length > 0 || outputPages.length > 0) && (
+        <div className={`mt-4 grid gap-6 ${outputPages.length > 0 ? 'md:grid-cols-2' : ''}`}>
+          {sourcePages.length > 0 && (
+            <PreviewPane
+              jobId={job.id}
+              label={outputPages.length > 0 ? 'Original' : 'Site clonado'}
+              kind="source"
+              pages={sourcePages}
+              frameName={`doppel-preview-source-${job.id}`}
+            />
+          )}
+          {outputPages.length > 0 && (
+            <PreviewPane
+              jobId={job.id}
+              label="Rebrand"
+              kind="output"
+              pages={outputPages}
+              frameName={`doppel-preview-output-${job.id}`}
+            />
+          )}
         </div>
       )}
     </main>
+  );
+}
+
+function PreviewPane({
+  jobId,
+  label,
+  kind,
+  pages,
+  frameName,
+}: {
+  jobId: string;
+  label: string;
+  kind: 'source' | 'output';
+  pages: { url: string; htmlPath: string }[];
+  frameName: string;
+}) {
+  const previewUrl = (htmlPath: string) => `/api/clones/${jobId}/preview/${htmlPath}${kind === 'source' ? '?kind=source' : ''}`;
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-medium text-neutral-400">{label}</h2>
+      <div className="mb-3 flex flex-wrap gap-2">
+        {pages.map((p, i) => (
+          <a
+            key={p.htmlPath}
+            href={previewUrl(p.htmlPath)}
+            target={frameName}
+            className="rounded border border-neutral-700 px-3 py-1 text-xs"
+          >
+            Página {i + 1}
+          </a>
+        ))}
+      </div>
+      {/* The preview renders a CLONED third-party site: its original HTML and its own
+          downloaded/localized JS. Served from /api/clones/... it would otherwise run at
+          the exact same origin as Doppel itself (localhost:3000), where a hostile script
+          in the cloned page could call Doppel's own API routes with the viewer's session.
+          `sandbox="allow-scripts"` (deliberately WITHOUT allow-same-origin) puts the frame
+          in an opaque origin: scripts still run, so the clone still looks right, but it
+          can't touch the parent's cookies/storage/DOM, call our API as the user, or
+          navigate the top-level page. The preview route sends a matching CSP header. */}
+      <iframe
+        name={frameName}
+        sandbox="allow-scripts"
+        src={previewUrl(pages[0].htmlPath)}
+        className="h-[70vh] w-full rounded border border-neutral-800 bg-white"
+      />
+    </div>
   );
 }

@@ -24,6 +24,11 @@ model CloneJob {
   copyChanges   String?
   logoSvg       String?
   previewPath   String?
+  // Stable pointer to the ORIGINAL crawled site, set once right after fetch and never
+  // overwritten. previewPath itself gets repointed to the rewritten/rebranded output once
+  // the job exports — without a separate field, the original becomes unreachable after that
+  // point, which is exactly what blocked ever showing a real "before vs after" preview.
+  sourcePreviewPath String?
   exportPath    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
