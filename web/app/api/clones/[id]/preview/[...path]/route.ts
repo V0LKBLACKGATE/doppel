@@ -46,5 +46,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const contentType = CONTENT_TYPES[path.extname(requested)] ?? 'application/octet-stream';
-  return new Response(fs.readFileSync(requested), { headers: { 'Content-Type': contentType } });
+  return new Response(fs.readFileSync(requested), {
+    headers: {
+      'Content-Type': contentType,
+      // Everything served here is UNTRUSTED third-party content (a cloned site's own HTML,
+      // CSS and JS). Without this it would execute same-origin with the Doppel app and could
+      // drive our own API routes as the logged-in viewer. The CSP `sandbox` directive applies
+      // the iframe sandbox at the response level, so the protection holds even if the file is
+      // opened directly in a tab instead of through the sandboxed <iframe> on the job page.
+      // `allow-scripts` is kept (and `allow-same-origin` deliberately is not) so the clone
+      // still renders and behaves like the original while staying in an opaque origin.
+      'Content-Security-Policy': "sandbox allow-scripts; default-src 'self' data: blob:",
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }

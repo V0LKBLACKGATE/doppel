@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { runBootstrap } from './bootstrap.js';
+import path from 'node:path';
+import fs from 'node:fs';
+import { runBootstrap, REPO_ROOT } from './bootstrap.js';
 
 describe('runBootstrap', () => {
   it('reports dockerReady=true and no warnings when the API key, docker, the image build, and migrate all succeed', async () => {
@@ -10,8 +12,23 @@ describe('runBootstrap', () => {
     expect(result.anthropicKeyPresent).toBe(true);
     expect(result.warnings).toHaveLength(0);
     expect(exec).toHaveBeenCalledWith(expect.stringContaining('docker --version'));
-    expect(exec).toHaveBeenCalledWith(expect.stringContaining('docker build'));
-    expect(exec).toHaveBeenCalledWith(expect.stringContaining('prisma migrate deploy'));
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('docker build'), { cwd: expect.any(String) });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('prisma migrate deploy'), { cwd: expect.any(String) });
+  });
+
+  it('runs the repo-relative commands from the repo root, not from the caller cwd', async () => {
+    const exec = vi.fn().mockResolvedValue({ stdout: '', stderr: '' });
+    await runBootstrap({ exec, platform: 'linux', env: { ANTHROPIC_API_KEY: 'sk-ant-test' }, repoRoot: '/srv/doppel' });
+
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('docker build'), { cwd: '/srv/doppel' });
+    expect(exec).toHaveBeenCalledWith(expect.stringContaining('prisma migrate deploy'), { cwd: '/srv/doppel' });
+  });
+
+  it('derives REPO_ROOT from this module location, so it holds whatever the cwd is', () => {
+    expect(path.isAbsolute(REPO_ROOT)).toBe(true);
+    // The two files the bootstrap commands reference by repo-relative path must be there.
+    expect(fs.existsSync(path.join(REPO_ROOT, 'renderer', 'Dockerfile'))).toBe(true);
+    expect(fs.existsSync(path.join(REPO_ROOT, 'prisma', 'schema.prisma'))).toBe(true);
   });
 
   it('warns at boot when ANTHROPIC_API_KEY is missing, without throwing', async () => {

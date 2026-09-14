@@ -8,7 +8,13 @@ export interface CrawlCliArgs {
   url: string;
   maxPages: number;
   outDir: string;
+  /** Per-asset download ceiling; overridable so tests don't have to wait the real one out. */
+  assetTimeoutMs?: number;
 }
+
+/** A single hanging asset host must not stall the whole crawl. 15s is generous for a
+ *  stylesheet/script/image and short enough that a dead host fails fast. */
+export const ASSET_FETCH_TIMEOUT_MS = 15000;
 
 const ASSET_SELECTORS: { selector: string; attr: string }[] = [
   { selector: 'link[rel="stylesheet"]', attr: 'href' },
@@ -18,6 +24,7 @@ const ASSET_SELECTORS: { selector: string; attr: string }[] = [
 
 export async function runCrawlCli(args: CrawlCliArgs): Promise<void> {
   const { url, maxPages, outDir } = args;
+  const assetTimeoutMs = args.assetTimeoutMs ?? ASSET_FETCH_TIMEOUT_MS;
   const pagesDir = path.join(outDir, 'pages');
   const assetsDir = path.join(outDir, 'assets');
   fs.mkdirSync(pagesDir, { recursive: true });
@@ -29,10 +36,12 @@ export async function runCrawlCli(args: CrawlCliArgs): Promise<void> {
   const manifest = {
     pages: await Promise.all(
       pages.map(async (page, i) => {
-        const localizedHtml = await localizeAssets(page.html, page.url, assetsDir, downloaded);
+        const localizedHtml = await localizeAssets(page.html, page.url, assetsDir, downloaded, assetTimeoutMs);
         const fileName = `page-${i}.html`;
         fs.writeFileSync(path.join(pagesDir, fileName), localizedHtml, 'utf-8');
-        return { url: page.url, htmlPath: path.join('pages', fileName), usedRenderer: page.usedRenderer };
+        // path.posix.join, not path.join: this value is concatenated straight into a URL by
+        // the web app's preview links, so it must use forward slashes on every host OS.
+        return { url: page.url, htmlPath: path.posix.join('pages', fileName), usedRenderer: page.usedRenderer };
       }),
     ),
   };
@@ -45,6 +54,7 @@ async function localizeAssets(
   pageUrl: string,
   assetsDir: string,
   downloaded: Map<string, string>,
+  assetTimeoutMs: number = ASSET_FETCH_TIMEOUT_MS,
 ): Promise<string> {
   const $ = cheerio.load(html);
 
@@ -62,7 +72,10 @@ async function localizeAssets(
 
       if (!downloaded.has(absoluteUrl)) {
         try {
-          const res = await fetch(absoluteUrl);
+          // A host that accepts the connection and then never answers would otherwise block
+          // this page's asset loop indefinitely. A timeout aborts the fetch and lands in the
+          // catch below, which is the same "failed asset" path as any other error.
+          const res = await fetch(absoluteUrl, { signal: AbortSignal.timeout(assetTimeoutMs) });
           if (!res.ok) {
             continue; // asset returned HTTP error — leave the original attr untouched below
           }

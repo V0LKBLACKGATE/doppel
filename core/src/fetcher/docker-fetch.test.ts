@@ -39,6 +39,29 @@ describe('fetchSiteViaDocker', () => {
     expect(result.pages[0].html).toBe('<html>ok</html>');
     expect(capturedArgs).toContain('doppel-renderer');
     expect(capturedArgs.join(' ')).toContain('--maxPages 20');
+
+    // Resource limits on the untrusted-content container
+    expect(capturedArgs).toContain('--memory=1g');
+    expect(capturedArgs).toContain('--cpus=1');
+    expect(capturedArgs).toContain('--pids-limit=256');
+    expect(capturedArgs.join(' ')).toContain('--security-opt no-new-privileges');
+  });
+
+  it('kills the container and rejects with DockerUnavailableError when the run exceeds its timeout', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    const kill = vi.fn();
+    const spawnFn = vi.fn(() => {
+      const child = new EventEmitter() as any;
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.kill = kill;
+      return child; // never emits 'close' — a hung container
+    });
+
+    await expect(
+      fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir, timeoutMs: 25 }),
+    ).rejects.toThrow(/timed out/);
+    expect(kill).toHaveBeenCalled();
   });
 
   it('throws DockerUnavailableError when docker exits non-zero', async () => {

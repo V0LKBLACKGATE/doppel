@@ -41,6 +41,14 @@ describe('runCrawlCli', () => {
 
     const manifest = JSON.parse(fs.readFileSync(path.join(outDir, 'manifest.json'), 'utf-8'));
     expect(manifest.pages.length).toBeGreaterThan(0);
+
+    // htmlPath is concatenated straight into a URL by the web app, so it must always use
+    // forward slashes — including when the crawl runs on Windows.
+    for (const page of manifest.pages) {
+      expect(page.htmlPath).toMatch(/^pages\/page-\d+\.html$/);
+      expect(page.htmlPath).not.toContain('\\');
+    }
+
     const firstPagePath = path.join(outDir, manifest.pages[0].htmlPath);
     const pageHtml = fs.readFileSync(firstPagePath, 'utf-8');
     expect(pageHtml).toContain('Fixture page');
@@ -106,4 +114,49 @@ describe('runCrawlCli', () => {
       fs.rmSync(outDir404, { recursive: true, force: true });
     }
   });
+
+  it('times out a hanging asset host instead of stalling the crawl, keeping the original href', async () => {
+    let outDirHang: string = '';
+    let serverHang: http.Server;
+    let baseUrlHang: string = '';
+    const openResponses: http.ServerResponse[] = [];
+
+    await new Promise<void>((resolve) => {
+      serverHang = http.createServer((req, res) => {
+        if (req.url === '/hangs.css') {
+          // Accept the request and never answer — the exact failure mode a per-asset
+          // timeout exists for.
+          openResponses.push(res);
+          return;
+        }
+        res.end(
+          '<html><head><link rel="stylesheet" href="/hangs.css"></head><body><h1>Page whose stylesheet host hangs.</h1></body></html>',
+        );
+      });
+      serverHang.listen(0, () => {
+        const address = serverHang.address();
+        baseUrlHang = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDirHang = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-hang-'));
+        resolve();
+      });
+    });
+
+    try {
+      const started = Date.now();
+      await runCrawlCli({ url: baseUrlHang, maxPages: 1, outDir: outDirHang, assetTimeoutMs: 150 });
+      expect(Date.now() - started).toBeLessThan(10000); // returned, did not hang
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDirHang, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDirHang, manifest.pages[0].htmlPath), 'utf-8');
+
+      // Timed-out asset is treated like any other failed fetch: attribute left untouched.
+      expect(pageHtml).toContain('href="/hangs.css"');
+      expect(fs.readdirSync(path.join(outDirHang, 'assets'))).toHaveLength(0);
+    } finally {
+      for (const res of openResponses) res.destroy();
+      await new Promise<void>((resolve) => serverHang.close(() => resolve()));
+      fs.rmSync(outDirHang, { recursive: true, force: true });
+    }
+  });
+
 });

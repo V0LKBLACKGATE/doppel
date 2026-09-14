@@ -73,8 +73,17 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               Baixar .zip
             </a>
           </div>
+          {/* The preview renders a CLONED third-party site: its original HTML and its own
+              downloaded/localized JS. Served from /api/clones/... it would otherwise run at
+              the exact same origin as Doppel itself (localhost:3000), where a hostile script
+              in the cloned page could call Doppel's own API routes with the viewer's session.
+              `sandbox="allow-scripts"` (deliberately WITHOUT allow-same-origin) puts the frame
+              in an opaque origin: scripts still run, so the clone still looks right, but it
+              can't touch the parent's cookies/storage/DOM, call our API as the user, or
+              navigate the top-level page. The preview route sends a matching CSP header. */}
           <iframe
             name="doppel-preview-frame"
+            sandbox="allow-scripts"
             src={`/api/clones/${job.id}/preview/${pages[0].htmlPath}`}
             className="h-[70vh] w-full rounded border border-neutral-800 bg-white"
           />

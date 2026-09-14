@@ -151,6 +151,74 @@ describe('rewriteSite', () => {
     fs.rmSync(workDirDouble, { recursive: true, force: true });
   });
 
+  it('writes a non-SVG original logo to a .svg sibling and repoints the pages at it', async () => {
+    const workDirPng = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-rewrite-png-'));
+    fs.mkdirSync(path.join(workDirPng, 'pages'), { recursive: true });
+    fs.mkdirSync(path.join(workDirPng, 'assets'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workDirPng, 'pages', 'page-0.html'),
+      '<html><body><img src="../assets/logo.png" srcset="../assets/logo.png 1x, ../assets/logo.png 2x" alt="Acme logo"></body></html>',
+    );
+    fs.writeFileSync(path.join(workDirPng, 'assets', 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    fs.writeFileSync(
+      path.join(workDirPng, 'manifest.json'),
+      JSON.stringify({ pages: [{ url: 'https://acme.example', htmlPath: 'pages/page-0.html', usedRenderer: 'static' }] }),
+    );
+
+    const profile: BrandProfile = { logoSrc: '../assets/logo.png', dominantColors: [], brandName: 'Acme' };
+    const rebrand: RebrandResult = { colorPalette: [], copyChanges: {}, logoSvg: '<svg>novo</svg>' };
+
+    const { rewrittenDir } = await rewriteSite(workDirPng, profile, rebrand);
+
+    // The SVG must land in a .svg file, never inside the original .png
+    const svgPath = path.join(rewrittenDir, 'assets', 'logo.svg');
+    expect(fs.existsSync(svgPath)).toBe(true);
+    expect(fs.readFileSync(svgPath, 'utf-8')).toBe('<svg>novo</svg>');
+    expect(fs.readFileSync(path.join(rewrittenDir, 'assets', 'logo.png'), 'utf-8')).not.toContain('<svg>novo</svg>');
+
+    // ...and the page must point at the new file, in both src and srcset
+    const html = fs.readFileSync(path.join(rewrittenDir, 'pages', 'page-0.html'), 'utf-8');
+    expect(html).toContain('src="../assets/logo.svg"');
+    expect(html).toContain('../assets/logo.svg 1x');
+    expect(html).toContain('../assets/logo.svg 2x');
+    expect(html).not.toContain('logo.png');
+
+    fs.rmSync(workDirPng, { recursive: true, force: true });
+  });
+
+  it('replaces 3-digit hex shorthand in the source when the analyzer normalized it to 6 digits', async () => {
+    const workDirShort = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-rewrite-short-'));
+    fs.mkdirSync(path.join(workDirShort, 'pages'), { recursive: true });
+    fs.mkdirSync(path.join(workDirShort, 'assets'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workDirShort, 'pages', 'page-0.html'),
+      '<html><head><style>.hero{background:#0bf;border-color:#0BFD;}</style></head><body><p>oi</p></body></html>',
+    );
+    fs.writeFileSync(path.join(workDirShort, 'assets', 'style.css'), '.cta{color:#0bf;}');
+    fs.writeFileSync(path.join(workDirShort, 'assets', 'logo.svg'), '<svg></svg>');
+    fs.writeFileSync(
+      path.join(workDirShort, 'manifest.json'),
+      JSON.stringify({ pages: [{ url: 'https://acme.example', htmlPath: 'pages/page-0.html', usedRenderer: 'static' }] }),
+    );
+
+    // brand-analyzer normalizes #0bf → #00bbff before it ever reaches dominantColors
+    const profile: BrandProfile = { logoSrc: '../assets/logo.svg', dominantColors: ['#00bbff'], brandName: 'Acme' };
+    const rebrand: RebrandResult = { colorPalette: ['#7c3aed'], copyChanges: {}, logoSvg: '<svg></svg>' };
+
+    const { rewrittenDir } = await rewriteSite(workDirShort, profile, rebrand);
+
+    const html = fs.readFileSync(path.join(rewrittenDir, 'pages', 'page-0.html'), 'utf-8');
+    expect(html).toContain('background:#7c3aed');
+    expect(html).not.toContain('#0bf;');
+    // 4-digit alpha shorthand keeps its boundary guard and must NOT be touched
+    expect(html).toContain('#0BFD');
+
+    const css = fs.readFileSync(path.join(rewrittenDir, 'assets', 'style.css'), 'utf-8');
+    expect(css).toContain('#7c3aed');
+
+    fs.rmSync(workDirShort, { recursive: true, force: true });
+  });
+
   it('excludes copy phrase replacements from <style> and <script> blocks', async () => {
     const workDirStyle = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-rewrite-style-'));
     fs.mkdirSync(path.join(workDirStyle, 'pages'), { recursive: true });

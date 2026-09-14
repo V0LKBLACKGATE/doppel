@@ -172,9 +172,9 @@ export const SIGNATURE_LINES: string[] = [
   '',
   `${dim}  DESENVOLVIDO POR${RESET}`,
   `${BOLD}${accent}  VØLK // BLACKGATE${RESET}`,
-  `${accent}  @VOLKBLACKGATE${RESET}`,
+  `${accent}  @V0LKBLACKGATE${RESET}`,
   `${mid}  ------------------------------------------${RESET}`,
-  `${accent}  github.com/VOLKBLACKGATE${RESET}`,
+  `${accent}  github.com/V0LKBLACKGATE${RESET}`,
   '',
   `${mid}  Toda porta tem uma falha.${RESET}`,
   `${mid}  Nem todos sabem encontrá-la.${RESET}`,
@@ -204,5 +204,9 @@ export function renderBanner(rows: string[] = WOLF_ROWS, tones: string[] = WOLF_
 }
 
 export function printBanner(): void {
-  process.stdout.write('\n' + renderBanner() + '\n' + SIGNATURE_LINES.join('\n') + '\n');
+  // MUST be stderr, not stdout: this process speaks MCP over the stdio transport, where
+  // stdout is the JSON-RPC channel. Anything non-protocol written there corrupts the stream
+  // for clients that parse stdout strictly. stderr is still shown in the user's terminal and
+  // captured in MCP client logs, so the banner is just as visible.
+  process.stderr.write('\n' + renderBanner() + '\n' + SIGNATURE_LINES.join('\n') + '\n');
 }

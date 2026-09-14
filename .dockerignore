@@ -4,3 +4,8 @@ node_modules
 tmp-jobs
 *.db
 .git
+
+# The Dockerfile does `COPY . .` — never let a local .env (which typically holds
+# ANTHROPIC_API_KEY) get baked into an image layer.
+.env
+.env.*

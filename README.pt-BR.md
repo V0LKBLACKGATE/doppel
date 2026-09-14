@@ -1,6 +1,6 @@
 # Doppel
 
-**Clone qualquer site. Rebrande com IA. Revise lado a lado. Exporte um pacote real e funcional — tudo rodando na sua própria máquina.**
+**Clone qualquer site. Rebrande com IA. Revise e edite cada sugestão. Exporte um pacote real e funcional — tudo rodando na sua própria máquina.**
 
 [![Built with Claude](https://img.shields.io/badge/Built%20with-Claude-6B4FBB)](https://claude.com)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org)
@@ -9,17 +9,19 @@
 [![Docker](https://img.shields.io/badge/Docker-renderer%20isolado-2496ED)](https://www.docker.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Desenvolvido por **VØLK // BLACKGATE** — [@VOLKBLACKGATE](https://github.com/VOLKBLACKGATE)
+Desenvolvido por **VØLK // BLACKGATE** — [@V0LKBLACKGATE](https://github.com/V0LKBLACKGATE)
 
 ---
 
 ## O que faz
 
-Cole uma URL. O Doppel rastreia o site (com fallback para browser headless de verdade em páginas com JS pesado), identifica logo/cores/nome, e pede pro Claude desenhar um rebrand completo — paleta nova, textos reescritos, logo novo em SVG — para a marca/nicho que você informar. Você revisa as sugestões lado a lado com o original, ajusta o que quiser, e exporta um clone real, navegável e para download.
+Cole uma URL. O Doppel rastreia o site (com fallback para browser headless de verdade em páginas com JS pesado), identifica logo/cores/nome, e pede pro Claude desenhar um rebrand completo — paleta nova, textos reescritos, logo novo em SVG — para a marca/nicho que você informar.
+
+Aí você revisa a proposta do Claude na UI web local: a paleta (lista de hex), as trocas de texto (frase antiga → frase nova) e o SVG do logo voltam como **campos de texto editáveis**, então dá pra ajustar o que quiser antes de aplicar. Ao exportar, o Doppel reescreve o site, mostra o resultado num frame de preview e te entrega um `.zip` do clone rebrandado. (A comparação é antes/depois no tempo — as páginas rebrandadas aparecem depois da exportação; ainda não existe uma visão lado a lado com o original.)
 
 Duas formas de usar:
 - **Direto de uma conversa com o Claude** (Claude Code ou Claude Desktop), via o servidor MCP incluído — peça "clona esse site como a Marca X" e ele roda o fluxo inteiro.
-- **Pela UI web local**, onde a revisão visual de fato acontece.
+- **Pela UI web local**, onde você edita o rebrand e vê o preview do resultado exportado.
 
 Tudo roda em `localhost`. Não existe backend hospedado — o uso da API do Claude é seu, com seu próprio custo.
 
@@ -70,8 +72,14 @@ O Doppel também não clona (e não tem como clonar) comportamento que depende d
 
 **Via Claude (MCP):**
 ```bash
-claude mcp add doppel -- npx doppel-mcp
+git clone https://github.com/V0LKBLACKGATE/doppel.git
+cd doppel
+npm install
+npm run build
+claude mcp add doppel -- node /caminho/absoluto/para/doppel/mcp-server/dist/index.js
 ```
+> O Doppel ainda não está publicado no npm, então `npx doppel-mcp` não funciona — aponte o comando MCP para o seu build local. Publicar no npm está no plano, mas ainda não foi feito.
+
 Depois, numa conversa: *"Clona https://exemplo.com como uma marca chamada Sorriso+, uma clínica odontológica."* O Claude imprime o banner, faz o bootstrap de Docker/Playwright/banco local no primeiro uso, e te devolve um link `localhost` pra revisar.
 
 **Direto pela UI web:**

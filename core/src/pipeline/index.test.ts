@@ -56,4 +56,23 @@ describe('pipeline', () => {
   it('rejects with a clear error when CloneJob is not found in applyAndExport', async () => {
     await expect(applyAndExport('non-existent-job-id', fakeDeps)).rejects.toThrow('CloneJob not found: non-existent-job-id');
   });
+
+  it('does not relabel a non-P2025 lookup failure as "not found"', async () => {
+    // A database outage during the lookup must stay a database outage: callers key their
+    // 404-vs-500 decision on the "not found" wording.
+    const mockPrisma = {
+      cloneJob: {
+        findUniqueOrThrow: vi.fn().mockRejectedValue(new Error('database connection lost')),
+      },
+    } as unknown as PrismaClient;
+
+    const err = await applyAndExport('job-1', { ...fakeDeps, prisma: mockPrisma }).then(
+      () => new Error('expected applyAndExport to reject'),
+      (e: unknown) => e,
+    );
+
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toContain('database connection lost');
+    expect((err as Error).message).not.toMatch(/not found/i);
+  });
 });

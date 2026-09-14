@@ -24,6 +24,19 @@ describe('/api/clones/[id]/preview/[...path]', () => {
     expect(await response.text()).toBe('<html>hi</html>');
   });
 
+  it('sandboxes the untrusted cloned content it serves', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
+
+    const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'job1', path: ['pages', 'page-0.html'] }) });
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('sandbox allow-scripts');
+    // allow-same-origin would defeat the whole point: it would put the cloned site's own
+    // scripts back on Doppel's origin, with access to our API routes.
+    expect(csp).not.toContain('allow-same-origin');
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+
   it('returns 404 for a path-traversal attempt', async () => {
     vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
 

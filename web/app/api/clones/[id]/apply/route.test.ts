@@ -35,4 +35,17 @@ describe('/api/clones/[id]/apply', () => {
     const body = await response.json();
     expect(body).toEqual({ error: 'CloneJob not found: missing-job' });
   });
+
+  it('returns 500 (not 404) when the failure is a real error rather than a missing job', async () => {
+    // applyAndExport only relabels Prisma's genuine P2025 miss as "not found"; every other
+    // failure keeps its own message, so this route can tell an outage from a bad id.
+    vi.spyOn(prisma.cloneJob, 'update').mockResolvedValue({} as any);
+    vi.spyOn(pipeline, 'applyAndExport').mockRejectedValue(new Error('database connection lost'));
+
+    const request = new Request('http://localhost/api/clones/job1/apply', { method: 'POST', body: JSON.stringify({}) });
+    const response = await POST(request, { params: Promise.resolve({ id: 'job1' }) });
+
+    expect(response.status).toBe(500);
+    expect((await response.json()).error).toContain('database connection lost');
+  });
 });

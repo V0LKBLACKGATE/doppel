@@ -19,6 +19,21 @@ export interface PipelineDeps {
 
 const jobWorkDirs = new Map<string, string>();
 
+/**
+ * True only for Prisma's genuine "record does not exist" error.
+ *
+ * `findUniqueOrThrow` rejects with a PrismaClientKnownRequestError subclass carrying
+ * `code === 'P2025'` (verified against this project's generated client: class NotFoundError,
+ * code P2025, message "No CloneJob found"). Checking the code — rather than the message, or
+ * treating every failure as a miss — is what keeps a real database outage from being
+ * reported to callers as "job not found", which the web/MCP layers translate into a 404.
+ *
+ * Exported so the MCP tool handlers classify errors exactly the way the web routes do.
+ */
+export function isRecordNotFoundError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: unknown }).code === 'P2025';
+}
+
 export async function runClonePipeline(
   sourceUrl: string,
   brandName: string,
@@ -78,7 +93,12 @@ export async function applyAndExport(jobId: string, deps: PipelineDeps = {}): Pr
   try {
     job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: jobId } });
   } catch (err) {
-    throw new Error(`CloneJob not found: ${jobId}`);
+    // Only relabel a genuine missing row. Blindly rewriting every failure as "not found"
+    // would make a database outage during this lookup indistinguishable from a bad job id,
+    // and callers classify on that wording (the apply route turns "not found" into a 404) —
+    // so a real outage would be reported to the user as a 404 instead of a 500.
+    if (isRecordNotFoundError(err)) throw new Error(`CloneJob not found: ${jobId}`);
+    throw err;
   }
 
   const workDir = jobWorkDirs.get(jobId) ?? job.previewPath;

@@ -45,4 +45,33 @@ describe('MCP tool handlers', () => {
     expect(result.previewUrl).toBeNull();
     expect(result.status).toBe('fetching');
   });
+
+  it('get_clone_preview answers with a clear message for an unknown job_id', async () => {
+    const notFound = Object.assign(new Error('No CloneJob found'), { code: 'P2025' });
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockRejectedValue(notFound);
+
+    const result = await handleGetClonePreview({ job_id: 'nope' });
+    expect(result.previewUrl).toBeNull();
+    expect((result as { message?: string }).message).toContain('nope');
+  });
+
+  it('get_clone_preview propagates a real database failure instead of calling it "not found"', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockRejectedValue(new Error('database connection lost'));
+
+    await expect(handleGetClonePreview({ job_id: 'job1' })).rejects.toThrow('database connection lost');
+  });
+
+  it('export_clone answers with a clear message for an unknown job_id', async () => {
+    vi.spyOn(pipeline, 'applyAndExport').mockRejectedValue(new Error('CloneJob not found: nope'));
+
+    const result = await handleExportClone({ job_id: 'nope' });
+    expect(result.zipPath).toBeNull();
+    expect((result as { message?: string }).message).toContain('nope');
+  });
+
+  it('export_clone propagates a real failure instead of calling it "not found"', async () => {
+    vi.spyOn(pipeline, 'applyAndExport').mockRejectedValue(new Error('database connection lost'));
+
+    await expect(handleExportClone({ job_id: 'job1' })).rejects.toThrow('database connection lost');
+  });
 });
