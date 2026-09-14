@@ -12,7 +12,12 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 export async function GET(_request: Request, { params }: { params: { id: string; path: string[] } }) {
-  const job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: params.id } });
+  let job;
+  try {
+    job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: params.id } });
+  } catch {
+    return new Response('Not found', { status: 404 });
+  }
   if (!job.previewPath) return new Response('Not found', { status: 404 });
 
   const root = path.resolve(job.previewPath);
