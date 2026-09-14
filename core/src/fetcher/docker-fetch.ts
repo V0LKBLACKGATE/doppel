@@ -32,24 +32,50 @@ export async function fetchSiteViaDocker(
       '--out',
       '/data',
     ]);
-    child.on('error', () => reject(new DockerUnavailableError('docker binary not found')));
+
+    let stderrText = '';
+
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') {
+        reject(new DockerUnavailableError('docker binary not found'));
+      } else {
+        reject(new DockerUnavailableError(`docker spawn failed: ${err.message}`));
+      }
+    });
+
+    child.stdout?.on('data', () => {
+      // Drain stdout to prevent pipe buffer from filling
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      stderrText += data.toString();
+    });
+
     child.on('close', (code: number) => {
       if (code === 0) resolve();
-      else reject(new DockerUnavailableError(`docker exited with code ${code}`));
+      else {
+        const msg = stderrText ? `docker exited with code ${code}: ${stderrText}` : `docker exited with code ${code}`;
+        reject(new DockerUnavailableError(msg));
+      }
     });
   });
 
-  const manifestPath = path.join(workDir, 'manifest.json');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
-    pages: { url: string; htmlPath: string; usedRenderer: 'static' | 'headless' }[];
-  };
+  try {
+    const manifestPath = path.join(workDir, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as {
+      pages: { url: string; htmlPath: string; usedRenderer: 'static' | 'headless' }[];
+    };
 
-  return {
-    workDir,
-    pages: manifest.pages.map((p) => ({
-      url: p.url,
-      usedRenderer: p.usedRenderer,
-      html: fs.readFileSync(path.join(workDir, p.htmlPath), 'utf-8'),
-    })),
-  };
+    return {
+      workDir,
+      pages: manifest.pages.map((p) => ({
+        url: p.url,
+        usedRenderer: p.usedRenderer,
+        html: fs.readFileSync(path.join(workDir, p.htmlPath), 'utf-8'),
+      })),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new DockerUnavailableError(`failed to parse container output: ${message}`);
+  }
 }

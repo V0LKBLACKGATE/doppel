@@ -48,4 +48,45 @@ describe('fetchSiteViaDocker', () => {
       DockerUnavailableError,
     );
   });
+
+  it('throws DockerUnavailableError when docker exits 0 but manifest is missing', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    const spawnFn = fakeSpawn(0, () => {
+      // Simulate docker exiting successfully but not writing manifest.json
+    });
+    await expect(fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir })).rejects.toBeInstanceOf(
+      DockerUnavailableError,
+    );
+  });
+
+  it('throws DockerUnavailableError when docker exits 0 but manifest is malformed', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    const spawnFn = fakeSpawn(0, (args) => {
+      const mountArg = args.find((a) => a.includes(':/data'));
+      const hostDir = mountArg?.split(':/data')[0] ?? '';
+      fs.mkdirSync(path.join(hostDir, 'pages'), { recursive: true });
+      // Write invalid JSON
+      fs.writeFileSync(path.join(hostDir, 'manifest.json'), 'not valid json {]');
+    });
+    await expect(fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir })).rejects.toBeInstanceOf(
+      DockerUnavailableError,
+    );
+  });
+
+  it('throws DockerUnavailableError when docker exits 0 but referenced HTML file is missing', async () => {
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-docker-'));
+    const spawnFn = fakeSpawn(0, (args) => {
+      const mountArg = args.find((a) => a.includes(':/data'));
+      const hostDir = mountArg?.split(':/data')[0] ?? '';
+      // Write manifest but don't create the HTML file it references
+      fs.mkdirSync(path.join(hostDir, 'pages'), { recursive: true });
+      fs.writeFileSync(
+        path.join(hostDir, 'manifest.json'),
+        JSON.stringify({ pages: [{ url: 'https://example.com', htmlPath: 'pages/missing.html', usedRenderer: 'static' }] }),
+      );
+    });
+    await expect(fetchSiteViaDocker('https://example.com', 20, { spawnFn: spawnFn as any, workDir })).rejects.toBeInstanceOf(
+      DockerUnavailableError,
+    );
+  });
 });
