@@ -1,0 +1,33 @@
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { prisma } from '@doppel/core/db.js';
+import { GET } from './route.js';
+
+describe('/api/clones/[id]/preview/[...path]', () => {
+  let previewPath: string;
+
+  beforeAll(() => {
+    previewPath = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-preview-'));
+    fs.mkdirSync(path.join(previewPath, 'pages'));
+    fs.writeFileSync(path.join(previewPath, 'pages', 'page-0.html'), '<html>hi</html>');
+  });
+
+  afterAll(() => fs.rmSync(previewPath, { recursive: true, force: true }));
+
+  it('serves a file that exists inside previewPath', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
+
+    const response = await GET(new Request('http://localhost/x'), { params: { id: 'job1', path: ['pages', 'page-0.html'] } });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('<html>hi</html>');
+  });
+
+  it('returns 404 for a path-traversal attempt', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
+
+    const response = await GET(new Request('http://localhost/x'), { params: { id: 'job1', path: ['..', '..', 'etc', 'passwd'] } });
+    expect(response.status).toBe(404);
+  });
+});
