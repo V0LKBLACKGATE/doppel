@@ -60,6 +60,212 @@ describe('runCrawlCli', () => {
     expect(cssContent).toContain('#1B7964');
   });
 
+  it('localizes CSS url() references (background image, @font-face) inside a linked stylesheet', async () => {
+    let outDirCss: string = '';
+    let serverCss: http.Server;
+    let baseUrlCss: string = '';
+
+    await new Promise<void>((resolve) => {
+      serverCss = http.createServer((req, res) => {
+        if (req.url === '/theme.css') {
+          res.setHeader('Content-Type', 'text/css');
+          res.end(
+            `@font-face { font-family: "Brand"; src: url('/fonts/brand.woff2') format('woff2'); }
+             .hero { background-image: url("/img/hero-bg.jpg"); }`,
+          );
+          return;
+        }
+        if (req.url === '/fonts/brand.woff2') {
+          res.setHeader('Content-Type', 'font/woff2');
+          res.end(Buffer.from('fake-font-bytes'));
+          return;
+        }
+        if (req.url === '/img/hero-bg.jpg') {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.end(Buffer.from('fake-jpeg-bytes'));
+          return;
+        }
+        res.end(
+          '<html><head><link rel="stylesheet" href="/theme.css"></head><body><h1>Page with a CSS background and a web font.</h1></body></html>',
+        );
+      });
+      serverCss.listen(0, () => {
+        const address = serverCss.address();
+        baseUrlCss = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDirCss = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-cssurl-'));
+        resolve();
+      });
+    });
+
+    try {
+      await runCrawlCli({ url: baseUrlCss, maxPages: 1, outDir: outDirCss });
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDirCss, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDirCss, manifest.pages[0].htmlPath), 'utf-8');
+      const stylesheetLocalName = pageHtml.match(/href="\.\.\/assets\/([^"]+\.css)"/)?.[1];
+      expect(stylesheetLocalName).toBeTruthy();
+
+      const cssContent = fs.readFileSync(path.join(outDirCss, 'assets', stylesheetLocalName!), 'utf-8');
+      // The stylesheet's own url() references must now point at localized files, not the
+      // original site — this is what makes the exported clone actually self-contained.
+      expect(cssContent).toMatch(/url\(\.\.\/assets\/[0-9a-f]+\.woff2\)/);
+      expect(cssContent).toMatch(/url\(\.\.\/assets\/[0-9a-f]+\.jpg\)/);
+      expect(cssContent).not.toContain('/fonts/brand.woff2');
+      expect(cssContent).not.toContain('/img/hero-bg.jpg');
+
+      // Both referenced assets (font + background image) actually landed on disk.
+      const assetFiles = fs.readdirSync(path.join(outDirCss, 'assets'));
+      expect(assetFiles.some((f) => f.endsWith('.woff2'))).toBe(true);
+      expect(assetFiles.some((f) => f.endsWith('.jpg'))).toBe(true);
+    } finally {
+      await new Promise<void>((resolve) => serverCss.close(() => resolve()));
+      fs.rmSync(outDirCss, { recursive: true, force: true });
+    }
+  });
+
+  it('localizes url() inside an inline <style> block and a srcset with multiple responsive variants', async () => {
+    let outDirInline: string = '';
+    let serverInline: http.Server;
+    let baseUrlInline: string = '';
+
+    await new Promise<void>((resolve) => {
+      serverInline = http.createServer((req, res) => {
+        if (req.url === '/img/small.jpg' || req.url === '/img/large.jpg') {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.end(Buffer.from(`fake-${req.url}`));
+          return;
+        }
+        res.end(
+          `<html><head><style>.banner { background: url(/img/small.jpg); }</style></head>
+           <body>
+             <h1>Page with an inline style background and a responsive image.</h1>
+             <img src="/img/small.jpg" srcset="/img/small.jpg 480w, /img/large.jpg 1200w">
+           </body></html>`,
+        );
+      });
+      serverInline.listen(0, () => {
+        const address = serverInline.address();
+        baseUrlInline = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDirInline = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-inline-'));
+        resolve();
+      });
+    });
+
+    try {
+      await runCrawlCli({ url: baseUrlInline, maxPages: 1, outDir: outDirInline });
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDirInline, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDirInline, manifest.pages[0].htmlPath), 'utf-8');
+
+      // Inline <style> url() localized, not left pointing at the original site.
+      expect(pageHtml).toMatch(/<style>\.banner\s*\{\s*background:\s*url\(\.\.\/assets\/[0-9a-f]+\.jpg\)/);
+
+      // srcset: both the 480w and 1200w variants localized independently, descriptors kept.
+      const srcsetMatch = pageHtml.match(/srcset="([^"]+)"/);
+      expect(srcsetMatch).toBeTruthy();
+      const srcset = srcsetMatch![1];
+      expect(srcset).toMatch(/\.\.\/assets\/[0-9a-f]+\.jpg 480w/);
+      expect(srcset).toMatch(/\.\.\/assets\/[0-9a-f]+\.jpg 1200w/);
+
+      // small.jpg is referenced 3 times (style url(), plain src, and srcset) but must only be
+      // downloaded once — the same content-addressed dedup already proven for stylesheets.
+      const assetFiles = fs.readdirSync(path.join(outDirInline, 'assets'));
+      expect(assetFiles).toHaveLength(2); // small.jpg + large.jpg, not 4
+    } finally {
+      await new Promise<void>((resolve) => serverInline.close(() => resolve()));
+      fs.rmSync(outDirInline, { recursive: true, force: true });
+    }
+  });
+
+  it('resolves lazy-loaded images (data-src, left empty/absent until scroll-triggered JS runs) into a real localized src', async () => {
+    let outDirLazy: string = '';
+    let serverLazy: http.Server;
+    let baseUrlLazy: string = '';
+
+    await new Promise<void>((resolve) => {
+      serverLazy = http.createServer((req, res) => {
+        if (req.url === '/img/product.jpg') {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.end(Buffer.from('fake-product-bytes'));
+          return;
+        }
+        res.end(
+          `<html><body>
+             <h1>Page with a lazy-loaded product image, VTEX-style.</h1>
+             <img class="lazyload" alt="" data-src="/img/product.jpg" src="" loading="lazy">
+           </body></html>`,
+        );
+      });
+      serverLazy.listen(0, () => {
+        const address = serverLazy.address();
+        baseUrlLazy = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDirLazy = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-lazy-'));
+        resolve();
+      });
+    });
+
+    try {
+      await runCrawlCli({ url: baseUrlLazy, maxPages: 1, outDir: outDirLazy });
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDirLazy, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDirLazy, manifest.pages[0].htmlPath), 'utf-8');
+
+      // The crawl never scrolls, so the site's own lazy-load JS never fires — src must be
+      // resolved directly from data-src, not left empty, or the image is just broken.
+      expect(pageHtml).toMatch(/<img[^>]*\ssrc="\.\.\/assets\/[0-9a-f]+\.jpg"/);
+      expect(pageHtml).not.toMatch(/\ssrc=""/);
+
+      const assetFiles = fs.readdirSync(path.join(outDirLazy, 'assets'));
+      expect(assetFiles).toHaveLength(1);
+      expect(assetFiles[0].endsWith('.jpg')).toBe(true);
+    } finally {
+      await new Promise<void>((resolve) => serverLazy.close(() => resolve()));
+      fs.rmSync(outDirLazy, { recursive: true, force: true });
+    }
+  });
+
+  it('strips crossorigin/integrity from elements whose asset got localized (they only apply to the original CDN, and break loading a same-preview-route copy)', async () => {
+    let outDirCors: string = '';
+    let serverCors: http.Server;
+    let baseUrlCors: string = '';
+
+    await new Promise<void>((resolve) => {
+      serverCors = http.createServer((req, res) => {
+        if (req.url === '/img/product.jpg') {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.end(Buffer.from('fake-product-bytes'));
+          return;
+        }
+        res.end(
+          `<html><body>
+             <h1>Page with an image copied straight from the original site's markup.</h1>
+             <img src="/img/product.jpg" crossorigin="anonymous" integrity="sha384-abc123">
+           </body></html>`,
+        );
+      });
+      serverCors.listen(0, () => {
+        const address = serverCors.address();
+        baseUrlCors = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDirCors = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-cors-'));
+        resolve();
+      });
+    });
+
+    try {
+      await runCrawlCli({ url: baseUrlCors, maxPages: 1, outDir: outDirCors });
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDirCors, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDirCors, manifest.pages[0].htmlPath), 'utf-8');
+
+      expect(pageHtml).toContain('src="../assets/');
+      expect(pageHtml).not.toContain('crossorigin');
+      expect(pageHtml).not.toContain('integrity');
+    } finally {
+      await new Promise<void>((resolve) => serverCors.close(() => resolve()));
+      fs.rmSync(outDirCors, { recursive: true, force: true });
+    }
+  });
+
   it('skips unreachable assets and preserves original href for 404s', async () => {
     let outDir404: string = '';
     let server404: http.Server;

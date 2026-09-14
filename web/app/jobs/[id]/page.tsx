@@ -108,12 +108,15 @@ function PreviewPane({
   pages: { url: string; htmlPath: string }[];
   frameName: string;
 }) {
-  const previewUrl = (htmlPath: string) => `/api/clones/${jobId}/preview/${htmlPath}${kind === 'source' ? '?kind=source' : ''}`;
+  // Served by preview-server.mjs — an isolated origin dedicated to rendering cloned sites
+  // (see that file and the iframe comment below for why), not the Next.js app's own origin.
+  const previewOrigin = process.env.PREVIEW_ORIGIN ?? 'http://localhost:3501';
+  const previewUrl = (htmlPath: string) => `${previewOrigin}/${jobId}/${htmlPath}${kind === 'source' ? '?kind=source' : ''}`;
 
   return (
     <div>
       <h2 className="mb-2 text-sm font-medium text-neutral-400">{label}</h2>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {pages.map((p, i) => (
           <a
             key={p.htmlPath}
@@ -124,18 +127,32 @@ function PreviewPane({
             Página {i + 1}
           </a>
         ))}
+        {/* Opens the exact same preview-server URL the iframe below points to, but as its own
+            full browser tab instead of squeezed into the small preview pane — just not
+            constrained to the iframe's fixed height. */}
+        <a
+          href={previewUrl(pages[0].htmlPath)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto text-xs text-neutral-400 underline decoration-dotted hover:text-neutral-200"
+        >
+          abrir em nova aba ↗
+        </a>
       </div>
       {/* The preview renders a CLONED third-party site: its original HTML and its own
-          downloaded/localized JS. Served from /api/clones/... it would otherwise run at
-          the exact same origin as Doppel itself (localhost:3000), where a hostile script
-          in the cloned page could call Doppel's own API routes with the viewer's session.
-          `sandbox="allow-scripts"` (deliberately WITHOUT allow-same-origin) puts the frame
-          in an opaque origin: scripts still run, so the clone still looks right, but it
-          can't touch the parent's cookies/storage/DOM, call our API as the user, or
-          navigate the top-level page. The preview route sends a matching CSP header. */}
+          downloaded/localized JS. It's served from preview-server.mjs, a dedicated static
+          file server on its OWN origin (a different port, no cookies, no auth, no API
+          routes) — never from Doppel's own origin. That isolation is what makes
+          `allow-same-origin` safe here: without it, an opaque-origin frame blocks
+          document.cookie/localStorage/sessionStorage outright, which crashes the bootstrap
+          script of any JS-heavy site (React/Vue SPAs, VTEX storefronts, ...) before it can
+          paint — the clone would look blank even though every asset downloaded correctly.
+          With a real (but worthless-to-attack) origin, those APIs work and the clone
+          actually renders, while still being unable to reach Doppel's real origin, its API
+          routes, or any session. */}
       <iframe
         name={frameName}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         src={previewUrl(pages[0].htmlPath)}
         className="h-[70vh] w-full rounded border border-neutral-800 bg-white"
       />

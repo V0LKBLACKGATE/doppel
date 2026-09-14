@@ -13,6 +13,9 @@ describe('/api/clones/[id]/preview/[...path]', () => {
     previewPath = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-preview-'));
     fs.mkdirSync(path.join(previewPath, 'pages'));
     fs.writeFileSync(path.join(previewPath, 'pages', 'page-0.html'), '<html>hi</html>');
+    fs.mkdirSync(path.join(previewPath, 'assets'));
+    fs.writeFileSync(path.join(previewPath, 'assets', 'photo.webp'), Buffer.from('fake-webp-bytes'));
+    fs.writeFileSync(path.join(previewPath, 'assets', 'brand.woff2'), Buffer.from('fake-woff2-bytes'));
 
     sourcePreviewPath = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-source-preview-'));
     fs.mkdirSync(path.join(sourcePreviewPath, 'pages'));
@@ -66,6 +69,22 @@ describe('/api/clones/[id]/preview/[...path]', () => {
     // rebranded palette is written, so the preview would render unstyled.
     expect(csp).not.toContain('default-src');
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+
+  it('serves image and font types that the renderer actually downloads, not just the original 6 extensions', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockResolvedValue({ id: 'job1', previewPath } as any);
+
+    const webpResponse = await GET(new Request('http://localhost/x'), {
+      params: Promise.resolve({ id: 'job1', path: ['assets', 'photo.webp'] }),
+    });
+    expect(webpResponse.status).toBe(200);
+    expect(webpResponse.headers.get('Content-Type')).toBe('image/webp');
+
+    const fontResponse = await GET(new Request('http://localhost/x'), {
+      params: Promise.resolve({ id: 'job1', path: ['assets', 'brand.woff2'] }),
+    });
+    expect(fontResponse.status).toBe(200);
+    expect(fontResponse.headers.get('Content-Type')).toBe('font/woff2');
   });
 
   it('returns 404 for a path-traversal attempt', async () => {
