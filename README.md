@@ -27,6 +27,20 @@ Everything runs on `localhost`. There is no hosted backend — you use your own 
 
 Built as a demonstration of using Claude as the *decision engine* of a product, not a bolt-on feature: Claude looks at real scraped brand data and makes actual design calls (palette, copy, logo), reviewed and refined by a human before anything ships.
 
+## Screenshots
+
+MCP server startup — the VØLK // BLACKGATE signature, printed before anything else runs:
+
+![MCP server banner](docs/screenshots/mcp-server-banner.png)
+
+Dashboard — job history and the new-clone form:
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+Job review — Claude's rebrand suggestions, editable before you apply them:
+
+![Job review](docs/screenshots/job-review.png)
+
 ## Architecture
 
 ```mermaid

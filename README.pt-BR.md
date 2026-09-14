@@ -27,6 +27,20 @@ Tudo roda em `localhost`. Não existe backend hospedado — o uso da API do Clau
 
 Construído como demonstração de usar o Claude como *motor de decisão* de um produto, não um recurso colado por fora: o Claude olha dados reais de marca extraídos do site e toma decisões de design de verdade (paleta, copy, logo), revisadas e ajustadas por um humano antes de qualquer coisa ser exportada.
 
+## Prints
+
+Inicialização do servidor MCP — a assinatura VØLK // BLACKGATE, impressa antes de qualquer outra coisa rodar:
+
+![Banner do servidor MCP](docs/screenshots/mcp-server-banner.png)
+
+Dashboard — histórico de jobs e o formulário de novo clone:
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+Revisão do job — sugestões de rebrand do Claude, editáveis antes de aplicar:
+
+![Revisão do job](docs/screenshots/job-review.png)
+
 ## Arquitetura
 
 ```mermaid
