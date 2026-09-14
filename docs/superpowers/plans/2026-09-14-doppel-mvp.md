@@ -225,11 +225,19 @@ git commit -m "chore: scaffold monorepo and CloneJob schema"
 **Files:**
 - Create: `core/src/fetcher/single-page.ts`
 - Test: `core/src/fetcher/single-page.test.ts`
+- Modify: `core/package.json` (add `cheerio`)
 
 **Interfaces:**
 - Produces: `fetchStaticPage(url: string): Promise<{ html: string; isThin: boolean }>` — `isThin` is `true` when the page looks JS-dependent (heuristic below), signaling callers to use the Playwright fallback (Task 3).
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Add the `cheerio` dependency**
+
+`cheerio` is used starting with this task and by several later `core` tasks (brand-analyzer, claude-rebrander, site-rewriter) — install it once here:
+```bash
+npm install -w core cheerio
+```
+
+- [ ] **Step 2: Write the failing test**
 
 `core/src/fetcher/single-page.test.ts`:
 ```typescript
@@ -269,12 +277,12 @@ describe('fetchStaticPage', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `npm test -w core -- fetcher/single-page`
 Expected: FAIL — `Cannot find module './single-page.js'`
 
-- [ ] **Step 3: Implement**
+- [ ] **Step 4: Implement**
 
 `core/src/fetcher/single-page.ts`:
 ```typescript
@@ -295,15 +303,15 @@ export async function fetchStaticPage(url: string): Promise<{ html: string; isTh
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `npm test -w core -- fetcher/single-page`
 Expected: PASS (2 passed)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add core/src/fetcher/single-page.ts core/src/fetcher/single-page.test.ts
+git add core/package.json core/src/fetcher/single-page.ts core/src/fetcher/single-page.test.ts
 git commit -m "feat(core): static page fetch with thin-content detection"
 ```
 
@@ -596,7 +604,8 @@ git commit -m "feat(core): multi-page same-domain crawl with robots.txt"
     "test": "vitest run"
   },
   "dependencies": {
-    "@doppel/core": "*"
+    "@doppel/core": "*",
+    "cheerio": "^1.0.0"
   }
 }
 ```
