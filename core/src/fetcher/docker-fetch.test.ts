@@ -41,9 +41,9 @@ describe('fetchSiteViaDocker', () => {
     expect(capturedArgs.join(' ')).toContain('--maxPages 20');
 
     // Resource limits on the untrusted-content container
-    expect(capturedArgs).toContain('--memory=1g');
+    expect(capturedArgs).toContain('--memory=2g');
     expect(capturedArgs).toContain('--cpus=1');
-    expect(capturedArgs).toContain('--pids-limit=256');
+    expect(capturedArgs).toContain('--pids-limit=1024');
     expect(capturedArgs.join(' ')).toContain('--security-opt no-new-privileges');
   });
 

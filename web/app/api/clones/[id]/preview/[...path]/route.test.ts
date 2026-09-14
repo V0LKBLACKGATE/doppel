@@ -34,6 +34,10 @@ describe('/api/clones/[id]/preview/[...path]', () => {
     // allow-same-origin would defeat the whole point: it would put the cloned site's own
     // scripts back on Doppel's origin, with access to our API routes.
     expect(csp).not.toContain('allow-same-origin');
+    // ...and no default-src: it would cascade to style-src-elem/style-src-attr and strip the
+    // cloned page's inline <style> blocks and style="..." attributes — exactly where the
+    // rebranded palette is written, so the preview would render unstyled.
+    expect(csp).not.toContain('default-src');
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff');
   });
 

@@ -56,7 +56,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       // opened directly in a tab instead of through the sandboxed <iframe> on the job page.
       // `allow-scripts` is kept (and `allow-same-origin` deliberately is not) so the clone
       // still renders and behaves like the original while staying in an opaque origin.
-      'Content-Security-Policy': "sandbox allow-scripts; default-src 'self' data: blob:",
+      //
+      // Deliberately NO `default-src`: without `'unsafe-inline'`, style-src-elem/style-src-attr
+      // (and their script counterparts) fall back to it and the browser would drop every
+      // <style> block and style="..." attribute in the cloned page. That is precisely where
+      // this product's output lives — brand-analyzer reads dominantColors out of those inline
+      // styles and site-rewriter writes the rebranded palette back into them — so a default-src
+      // here would render the rebrand as an unstyled page. `sandbox allow-scripts` alone fully
+      // covers the actual threat (same-origin script access to Doppel's own API).
+      'Content-Security-Policy': 'sandbox allow-scripts',
       'X-Content-Type-Options': 'nosniff',
     },
   });

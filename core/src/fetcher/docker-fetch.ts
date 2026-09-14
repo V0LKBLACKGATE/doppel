@@ -32,9 +32,16 @@ export async function fetchSiteViaDocker(
       // so cap what a hostile or simply heavy page can consume on the host, and stop the
       // process tree from gaining privileges. (No --user or network restriction: both break
       // the Playwright image's rendering.)
-      '--memory=1g',
+      //
+      // Sized for a real crawl, not the single-page smoke test: the cgroup pids controller
+      // counts THREADS, and one Chromium instance carries 40-60+ of them on its own before
+      // the renderer/GPU/zygote processes add theirs — a 20-page crawl can approach a 256
+      // ceiling and start failing fork(). 2g likewise leaves headroom against an OOM-kill
+      // (exit 137) on a heavy site. Still a real bound on a runaway page, just not one a
+      // legitimate job trips.
+      '--memory=2g',
       '--cpus=1',
-      '--pids-limit=256',
+      '--pids-limit=1024',
       '--security-opt',
       'no-new-privileges',
       '-v',
