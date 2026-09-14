@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../core/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  // Hardcoded on purpose: this is a fixed local-only dev database (spec §1 — Doppel has
+  // no hosted backend), not an environment-specific connection. An env()-based URL would need
+  // loading in every runtime that touches Prisma (Vitest, the MCP server, the Next.js app) —
+  // a literal path here needs no such wiring and can't throw "environment variable not found."
+  url      = "file:../doppel-dev.db"
+}
+
+model CloneJob {
+  id            String   @id @default(cuid())
+  sourceUrl     String
+  brandName     String
+  niche         String?
+  status        String
+  errorReason   String?
+  brandProfile  String?  // JSON BrandProfile (logoSrc, dominantColors, brandName) captured from the source site — Task 11 needs this at apply-time, not just the Claude output
+  colorPalette  String?
+  copyChanges   String?
+  logoSvg       String?
+  previewPath   String?
+  exportPath    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

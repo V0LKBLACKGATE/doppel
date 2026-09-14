@@ -1,0 +1,17 @@
+{
+  "name": "@doppel/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./dist/*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0"
+  }
+}

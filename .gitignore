@@ -1,0 +1,7 @@
+node_modules/
+dist/
+core/generated/
+*.db
+*.db-journal
+.env
+/tmp-jobs/

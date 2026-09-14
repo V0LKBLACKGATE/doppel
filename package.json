@@ -1,0 +1,15 @@
+{
+  "name": "doppel",
+  "private": true,
+  "workspaces": ["core"],
+  "scripts": {
+    "postinstall": "prisma generate --schema prisma/schema.prisma",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "prisma": "^5.20.0"
+  }
+}
