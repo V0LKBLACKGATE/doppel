@@ -44,6 +44,8 @@ flowchart TB
     H --> I[exporter<br/>.zip + local preview]
 ```
 
+Full diagram source: [docs/architecture-diagram.md](docs/architecture-diagram.md)
+
 ## Responsible use
 
 Doppel intentionally has **no usage gate** — no confirmation dialog, no license check. It's meant for **study and prototyping**: agency/freelance proposals ("here's how your site could look"), and as a technical showcase. It is not meant to republish a clone of someone else's site as a finished product. Please don't do that.
@@ -61,9 +63,12 @@ Then, in a chat: *"Clone https://example.com as a brand called Sorriso+, a denta
 **Via the web app directly:**
 ```bash
 npm install
+docker build -f renderer/Dockerfile -t doppel-renderer .
+npx prisma migrate deploy --schema prisma/schema.prisma
 npm run build
-npm run dev -w web
+ANTHROPIC_API_KEY=sk-... npm run dev -w web
 ```
+Make sure `ANTHROPIC_API_KEY` is set in your environment before starting — the Claude rebrand step needs it to function.
 
 ## Stack
 
