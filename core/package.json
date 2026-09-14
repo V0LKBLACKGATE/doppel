@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@prisma/client": "^5.20.0",
     "cheerio": "^1.2.0",
     "playwright": "^1.63.0",
