@@ -39,4 +39,11 @@ describe('/api/clones/[id]/export', () => {
     const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'missing-job' }) });
     expect(response.status).toBe(404);
   });
+
+  it('returns 500 (not 404) when the lookup fails for a reason other than a missing job', async () => {
+    vi.spyOn(prisma.cloneJob, 'findUniqueOrThrow').mockRejectedValue(new Error('database connection lost'));
+
+    const response = await GET(new Request('http://localhost/x'), { params: Promise.resolve({ id: 'job1' }) });
+    expect(response.status).toBe(500);
+  });
 });

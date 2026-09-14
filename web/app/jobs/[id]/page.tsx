@@ -12,8 +12,20 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   let job;
   try {
     job = await prisma.cloneJob.findUniqueOrThrow({ where: { id } });
-  } catch {
-    notFound();
+  } catch (err) {
+    // Only render Next's 404 page when the lookup itself says the job doesn't exist.
+    // Prisma's findUniqueOrThrow throws a NotFoundError with message "No CloneJob
+    // found" (code P2025) for a missing row — verified empirically against this
+    // project's actual Prisma client (see the sibling export route for the same
+    // check and reasoning). Anything else (a database outage, a dropped connection,
+    // ...) is a real server error: rethrow it so Next's default error handling (or an
+    // error boundary) surfaces it as an actual failure instead of a fake "not found",
+    // which would otherwise hide the real problem from whoever debugs it later.
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes('found')) {
+      notFound();
+    }
+    throw err;
   }
 
   let pages: { url: string; htmlPath: string }[] = [];
