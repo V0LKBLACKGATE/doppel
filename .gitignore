@@ -5,3 +5,5 @@ core/generated/
 *.db-journal
 .env
 /tmp-jobs/
+web/.next/
+web/next-env.d.ts
