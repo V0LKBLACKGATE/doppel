@@ -21,7 +21,7 @@ Aí você revisa a proposta do Claude na UI web local: a paleta (lista de hex), 
 
 O Doppel é instalado e conduzido inteiramente **de uma conversa com o Claude** (Claude Code ou Claude Desktop), via o servidor MCP incluído — peça "clona esse site como a Marca X" e o Claude faz o bootstrap de Docker/banco local/UI web no primeiro uso, e te devolve um link `localhost` pra revisar e editar o rebrand lado a lado com o original.
 
-Tudo roda em `localhost`, na sua própria máquina. Não existe backend hospedado — o uso da API do Claude é seu, com seu próprio custo.
+Tudo roda em `localhost`, na sua própria máquina. Não existe backend hospedado. Definir `ANTHROPIC_API_KEY` é opcional — ela só é usada pra proposta automática de paleta/copy/logo, com seu próprio uso de API e custo; sem ela, dá pra preencher esses campos você mesmo.
 
 ## Por que existe
 
@@ -75,9 +75,9 @@ npm install
 docker build -f renderer/Dockerfile -t doppel-renderer .
 npx prisma migrate deploy --schema prisma/schema.prisma
 npm run build
-ANTHROPIC_API_KEY=sk-... npm run dev -w web
+npm run dev -w web
 ```
-Certifique-se de que `ANTHROPIC_API_KEY` está definida no seu ambiente antes de começar — o passo de rebrand com Claude precisa dela para funcionar. `npm run dev -w web` sobe o app Next.js e o `preview-server.mjs` juntos (a origem isolada onde os sites clonados de fato renderizam — veja esse arquivo pra entender o porquê).
+`ANTHROPIC_API_KEY` é **opcional**: defina (`ANTHROPIC_API_KEY=sk-... npm run dev -w web`) se quiser que o Claude proponha a paleta/copy/logo automaticamente. Sem ela, esse passo falha mas a clonagem termina do mesmo jeito — a tela de revisão deixa você preencher a paleta, os textos e o logo você mesmo e exportar, sem usar API nenhuma. `npm run dev -w web` sobe o app Next.js e o `preview-server.mjs` juntos (a origem isolada onde os sites clonados de fato renderizam — veja esse arquivo pra entender o porquê).
 
 ## Stack
 
