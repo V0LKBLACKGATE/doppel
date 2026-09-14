@@ -27,12 +27,17 @@ export async function crawlSite(startUrl: string, maxPages = 20): Promise<CrawlR
     visited.add(url);
     if (!robots.isAllowed(url, 'DoppelBot')) continue;
 
-    const { html, isThin } = await fetchStaticPage(url);
-    const finalHtml = isThin ? (await fetchRenderedPage(url)).html : html;
-    pages.push({ url, html: finalHtml, usedRenderer: isThin ? 'headless' : 'static' });
+    try {
+      const { html, isThin } = await fetchStaticPage(url);
+      const finalHtml = isThin ? (await fetchRenderedPage(url)).html : html;
+      pages.push({ url, html: finalHtml, usedRenderer: isThin ? 'headless' : 'static' });
 
-    for (const link of extractSameDomainLinks(finalHtml, url, origin)) {
-      if (!visited.has(link)) queue.push(link);
+      for (const link of extractSameDomainLinks(finalHtml, url, origin)) {
+        if (!visited.has(link)) queue.push(link);
+      }
+    } catch {
+      // Skip this page on any error and continue processing the rest of the queue
+      continue;
     }
   }
 
@@ -68,5 +73,9 @@ function extractSameDomainLinks(html: string, pageUrl: string, origin: string): 
 function normalize(url: string): string {
   const u = new URL(url);
   u.hash = '';
+  // Strip trailing slash from pathname, but keep the root `/` as-is
+  if (u.pathname !== '/' && u.pathname.endsWith('/')) {
+    u.pathname = u.pathname.slice(0, -1);
+  }
   return u.toString();
 }
