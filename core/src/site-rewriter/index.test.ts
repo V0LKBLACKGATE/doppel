@@ -116,4 +116,73 @@ describe('rewriteSite', () => {
 
     fs.rmSync(workDirEmbed, { recursive: true, force: true });
   });
+
+  it('prevents order-dependent double-replacement when replacement value contains another key', async () => {
+    const workDirDouble = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-rewrite-double-'));
+    fs.mkdirSync(path.join(workDirDouble, 'pages'), { recursive: true });
+    fs.mkdirSync(path.join(workDirDouble, 'assets'), { recursive: true });
+    // copyChanges where first replacement contains the second key: "Welcome" → "Welcome to Acme Labs", then "Acme Labs" → "Acme"
+    // Without the fix, the second pass would corrupt the newly-inserted "Acme Labs"
+    fs.writeFileSync(
+      path.join(workDirDouble, 'pages', 'page-0.html'),
+      '<html><body><p>Welcome</p></body></html>',
+    );
+    fs.writeFileSync(path.join(workDirDouble, 'assets', 'logo.svg'), '<svg></svg>');
+    fs.writeFileSync(
+      path.join(workDirDouble, 'manifest.json'),
+      JSON.stringify({ pages: [{ url: 'https://test.example', htmlPath: 'pages/page-0.html', usedRenderer: 'static' }] }),
+    );
+
+    const profile: BrandProfile = { logoSrc: '../assets/logo.svg', dominantColors: [], brandName: 'Test' };
+    const rebrand: RebrandResult = {
+      colorPalette: [],
+      copyChanges: { 'Welcome': 'Welcome to Acme Labs', 'Acme Labs': 'Acme' },
+      logoSvg: '<svg></svg>',
+    };
+
+    const { rewrittenDir } = await rewriteSite(workDirDouble, profile, rebrand);
+
+    const html = fs.readFileSync(path.join(rewrittenDir, 'pages', 'page-0.html'), 'utf-8');
+    // The result should be "Welcome to Acme Labs" (from the first key replacement)
+    // NOT cascaded to "Welcome to Acme" by the second replacement
+    expect(html).toContain('Welcome to Acme Labs');
+    expect(html).not.toContain('Welcome to Acme</'); // should not have just "Acme"
+
+    fs.rmSync(workDirDouble, { recursive: true, force: true });
+  });
+
+  it('excludes copy phrase replacements from <style> and <script> blocks', async () => {
+    const workDirStyle = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-rewrite-style-'));
+    fs.mkdirSync(path.join(workDirStyle, 'pages'), { recursive: true });
+    fs.mkdirSync(path.join(workDirStyle, 'assets'), { recursive: true });
+    // HTML with "Welcome to Acme" appearing both in regular text AND inside a <style> block
+    fs.writeFileSync(
+      path.join(workDirStyle, 'pages', 'page-0.html'),
+      '<html><head><style>/* Welcome to Acme site */ .brand { color: red; }</style></head>' +
+        '<body><h1>Welcome to Acme</h1></body></html>',
+    );
+    fs.writeFileSync(path.join(workDirStyle, 'assets', 'logo.svg'), '<svg></svg>');
+    fs.writeFileSync(
+      path.join(workDirStyle, 'manifest.json'),
+      JSON.stringify({ pages: [{ url: 'https://test.example', htmlPath: 'pages/page-0.html', usedRenderer: 'static' }] }),
+    );
+
+    const profile: BrandProfile = { logoSrc: '../assets/logo.svg', dominantColors: [], brandName: 'Test' };
+    const rebrand: RebrandResult = {
+      colorPalette: [],
+      copyChanges: { 'Welcome to Acme': 'Bem-vindo à Sorriso+' },
+      logoSvg: '<svg></svg>',
+    };
+
+    const { rewrittenDir } = await rewriteSite(workDirStyle, profile, rebrand);
+
+    const html = fs.readFileSync(path.join(rewrittenDir, 'pages', 'page-0.html'), 'utf-8');
+    // The phrase should be replaced in the <h1> tag (normal content)
+    expect(html).toContain('<h1>Bem-vindo à Sorriso+</h1>');
+    // But should NOT be replaced inside the <style> block
+    expect(html).toContain('/* Welcome to Acme site */'); // original comment should remain
+    expect(html).not.toContain('/* Bem-vindo à Sorriso+ site */');
+
+    fs.rmSync(workDirStyle, { recursive: true, force: true });
+  });
 });

@@ -58,15 +58,28 @@ function rewritePagesDir(pagesDir: string, colorMap: Map<string, string>, copyCh
       .each((_, node) => {
         if (node.type !== 'text') return;
         const textNode = node as unknown as { data: string };
-        let text = textNode.data;
-        for (const [original, replacement] of Object.entries(copyChanges)) {
-          text = text.split(original).join(replacement);
-        }
-        textNode.data = text;
+
+        // Skip text nodes inside <style> or <script> elements
+        const parentElement = (node as unknown as { parent: unknown }).parent as unknown as { name?: string };
+        if (parentElement?.name === 'style' || parentElement?.name === 'script') return;
+
+        textNode.data = replaceCopyText(textNode.data, copyChanges);
       });
 
     fs.writeFileSync(filePath, $.html(), 'utf-8');
   }
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function replaceCopyText(text: string, copyChanges: Record<string, string>): string {
+  const keys = Object.keys(copyChanges).sort((a, b) => b.length - a.length);
+  if (keys.length === 0) return text;
+
+  const pattern = new RegExp(keys.map(escapeRegExp).join('|'), 'g');
+  return text.replace(pattern, (matched) => copyChanges[matched]);
 }
 
 function replaceColors(content: string, colorMap: Map<string, string>): string {
