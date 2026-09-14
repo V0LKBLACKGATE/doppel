@@ -1,13 +1,15 @@
 import path from 'node:path';
-import { prisma } from '../db.js';
+import { prisma as defaultPrisma } from '../db.js';
 import { fetchSiteViaDocker } from '../fetcher/docker-fetch.js';
 import { analyzeBrand } from '../brand-analyzer/index.js';
 import { extractCopyExcerpts, rebrandSite } from '../claude-rebrander/index.js';
 import { rewriteSite } from '../site-rewriter/index.js';
 import { exportSite } from '../exporter/index.js';
+import type { PrismaClient } from '../../generated/prisma/index.js';
 import type { CloneJob } from '../../generated/prisma/index.js';
 
 export interface PipelineDeps {
+  prisma?: PrismaClient;
   fetchSite?: typeof fetchSiteViaDocker;
   analyze?: typeof analyzeBrand;
   rebrand?: typeof rebrandSite;
@@ -23,11 +25,17 @@ export async function runClonePipeline(
   niche: string | undefined,
   deps: PipelineDeps = {},
 ): Promise<CloneJob> {
+  const prisma = deps.prisma ?? defaultPrisma;
   const fetchSite = deps.fetchSite ?? fetchSiteViaDocker;
   const analyze = deps.analyze ?? analyzeBrand;
   const rebrand = deps.rebrand ?? rebrandSite;
 
-  let job = await prisma.cloneJob.create({ data: { sourceUrl, brandName, niche, status: 'fetching' } });
+  let job: CloneJob;
+  try {
+    job = await prisma.cloneJob.create({ data: { sourceUrl, brandName, niche, status: 'fetching' } });
+  } catch (err) {
+    throw new Error(`Failed to create CloneJob: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   try {
     const { workDir, pages } = await fetchSite(sourceUrl, 20);
@@ -62,10 +70,17 @@ export async function runClonePipeline(
 }
 
 export async function applyAndExport(jobId: string, deps: PipelineDeps = {}): Promise<CloneJob> {
+  const prisma = deps.prisma ?? defaultPrisma;
   const rewrite = deps.rewrite ?? rewriteSite;
   const exportZip = deps.exportZip ?? exportSite;
 
-  const job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: jobId } });
+  let job: CloneJob;
+  try {
+    job = await prisma.cloneJob.findUniqueOrThrow({ where: { id: jobId } });
+  } catch (err) {
+    throw new Error(`CloneJob not found: ${jobId}`);
+  }
+
   const workDir = jobWorkDirs.get(jobId) ?? job.previewPath;
   if (!workDir) {
     return prisma.cloneJob.update({ where: { id: jobId }, data: { status: 'erro', errorReason: 'work directory not found for job' } });

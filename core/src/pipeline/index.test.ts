@@ -1,7 +1,8 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, vi } from 'vitest';
 import { prisma } from '../db.js';
 import { runClonePipeline, applyAndExport } from './index.js';
 import type { PipelineDeps } from './index.js';
+import type { PrismaClient } from '../../generated/prisma/index.js';
 
 const fakeDeps: PipelineDeps = {
   fetchSite: async () =>
@@ -37,5 +38,22 @@ describe('pipeline', () => {
     const exported = await applyAndExport(job.id, fakeDeps);
     expect(exported.status).toBe('exportado');
     expect(exported.exportPath).toBeTruthy();
+  });
+
+  it('rejects with a clear error when CloneJob creation fails', async () => {
+    const mockPrisma = {
+      cloneJob: {
+        create: vi.fn().mockRejectedValue(new Error('database connection lost')),
+      },
+    } as unknown as PrismaClient;
+
+    const depsWithFailingCreate: PipelineDeps = { ...fakeDeps, prisma: mockPrisma };
+    await expect(runClonePipeline('https://acme.example', 'Sorriso+', undefined, depsWithFailingCreate)).rejects.toThrow(
+      'Failed to create CloneJob: database connection lost',
+    );
+  });
+
+  it('rejects with a clear error when CloneJob is not found in applyAndExport', async () => {
+    await expect(applyAndExport('non-existent-job-id', fakeDeps)).rejects.toThrow('CloneJob not found: non-existent-job-id');
   });
 });
