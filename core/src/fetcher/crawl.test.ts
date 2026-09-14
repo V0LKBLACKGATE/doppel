@@ -13,7 +13,7 @@ describe('crawlSite', () => {
       '/about': '<html><body>About page content here for real.</body></html>',
       '/private': '<html><body>Should never be fetched.</body></html>',
     };
-    server = http.createServer((req, res) => {
+    server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
       const body = pages[req.url ?? ''];
       if (body) {
         res.setHeader('Content-Type', 'text/plain');
@@ -46,7 +46,7 @@ describe('crawlSite', () => {
 
   it('continues crawl on per-page fetch errors', async () => {
     let serverWithErrors: http.Server;
-    let errorBaseUrl: string;
+    let errorBaseUrl: string = '';
 
     await new Promise<void>((resolve) => {
       const pages: Record<string, string> = {
@@ -55,7 +55,7 @@ describe('crawlSite', () => {
         '/good1': '<html><body>Good page 1.</body></html>',
         '/good2': '<html><body>Good page 2.</body></html>',
       };
-      serverWithErrors = http.createServer((req, res) => {
+      serverWithErrors = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
         const body = pages[req.url ?? ''];
         if (body) {
           res.setHeader('Content-Type', 'text/plain');
@@ -84,12 +84,12 @@ describe('crawlSite', () => {
     // Should have 3 pages, not 0 (proving the crawl continued after the error)
     expect(result.pages.length).toBeGreaterThan(0);
 
-    await new Promise<void>((resolve) => serverWithErrors.close(resolve));
+    await new Promise<void>((resolve) => serverWithErrors.close(() => resolve()));
   });
 
   it('treats trailing-slash variants as the same page', async () => {
     let serverWithSlash: http.Server;
-    let slashBaseUrl: string;
+    let slashBaseUrl: string = '';
 
     await new Promise<void>((resolve) => {
       const pages: Record<string, string> = {
@@ -99,7 +99,7 @@ describe('crawlSite', () => {
         '/about/': '<html><body>About page (with slash).</body></html>',
         '/contact': '<html><body><a href="/about">About without slash</a></body></html>',
       };
-      serverWithSlash = http.createServer((req, res) => {
+      serverWithSlash = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
         const body = pages[req.url ?? ''];
         if (body) {
           res.setHeader('Content-Type', 'text/plain');
@@ -124,6 +124,6 @@ describe('crawlSite', () => {
     expect(aboutUrls.length).toBe(1);
     expect(aboutUrls[0]).toBe(`${slashBaseUrl}/about`);
 
-    await new Promise<void>((resolve) => serverWithSlash.close(resolve));
+    await new Promise<void>((resolve) => serverWithSlash.close(() => resolve()));
   });
 });

@@ -7,7 +7,7 @@ describe('fetchRenderedPage', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    server = http.createServer((req, res) => {
+    server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
       res.setHeader('Content-Type', 'text/html');
       res.end(`<html><body><div id="root"></div><script>
         document.getElementById('root').innerHTML = '<h1>Rendered</h1>';

@@ -1,7 +1,9 @@
 import * as cheerio from 'cheerio';
-import robotsParser from 'robots-parser';
+import * as robotsParserModule from 'robots-parser';
 import { fetchStaticPage } from './single-page.js';
 import { fetchRenderedPage } from './rendered-page.js';
+
+const robotsParser = (robotsParserModule as any).default || robotsParserModule;
 
 export interface CrawledPage {
   url: string;

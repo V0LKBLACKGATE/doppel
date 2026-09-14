@@ -7,7 +7,7 @@ describe('fetchStaticPage', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    server = http.createServer((req, res) => {
+    server = http.createServer((req: http.IncomingMessage, res: http.ServerResponse) => {
       if (req.url === '/static') {
         res.end('<html><body><h1>Hello</h1><p>Real content here, plenty of it to read.</p></body></html>');
       } else if (req.url === '/spa') {
