@@ -51,4 +51,59 @@ describe('runCrawlCli', () => {
     const cssContent = fs.readFileSync(path.join(outDir, 'assets', assetFiles[0]), 'utf-8');
     expect(cssContent).toContain('#1B7964');
   });
+
+  it('skips unreachable assets and preserves original href for 404s', async () => {
+    let outDir404: string = '';
+    let server404: http.Server;
+    let baseUrl404: string = '';
+
+    await new Promise<void>((resolve) => {
+      server404 = http.createServer((req, res) => {
+        if (req.url === '/good.css') {
+          res.setHeader('Content-Type', 'text/css');
+          res.end('body { color: green; }');
+          return;
+        }
+        if (req.url === '/missing.css') {
+          res.statusCode = 404;
+          res.end('Not Found');
+          return;
+        }
+        res.end(
+          '<html><head><link rel="stylesheet" href="/good.css"><link rel="stylesheet" href="/missing.css"></head><body><h1>Page with missing asset.</h1></body></html>',
+        );
+      });
+      server404.listen(0, () => {
+        const address = server404.address();
+        baseUrl404 = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+        outDir404 = fs.mkdtempSync(path.join(os.tmpdir(), 'doppel-cli-404-'));
+        resolve();
+      });
+    });
+
+    try {
+      await runCrawlCli({ url: baseUrl404, maxPages: 5, outDir: outDir404 });
+
+      const manifest = JSON.parse(fs.readFileSync(path.join(outDir404, 'manifest.json'), 'utf-8'));
+      const pageHtml = fs.readFileSync(path.join(outDir404, manifest.pages[0].htmlPath), 'utf-8');
+
+      // Good asset should be localized with relative path
+      expect(pageHtml).toContain('href="../assets/');
+      expect(pageHtml).toMatch(/href="\.\.\/assets\/[^"]+\.css"/);
+
+      // Missing asset should NOT be converted to localized path
+      expect(pageHtml).toContain('href="/missing.css"');
+      // and the error response body should NOT be written to assets
+      expect(pageHtml).not.toContain('Not Found');
+
+      // Only the good asset should be in assets folder
+      const assetFiles = fs.readdirSync(path.join(outDir404, 'assets'));
+      expect(assetFiles.length).toBe(1);
+      const cssContent = fs.readFileSync(path.join(outDir404, 'assets', assetFiles[0]), 'utf-8');
+      expect(cssContent).toContain('green');
+    } finally {
+      await new Promise<void>((resolve) => server404.close(() => resolve()));
+      fs.rmSync(outDir404, { recursive: true, force: true });
+    }
+  });
 });

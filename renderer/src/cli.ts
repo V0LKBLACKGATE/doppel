@@ -63,13 +63,16 @@ async function localizeAssets(
       if (!downloaded.has(absoluteUrl)) {
         try {
           const res = await fetch(absoluteUrl);
+          if (!res.ok) {
+            continue; // asset returned HTTP error — leave the original attr untouched below
+          }
           const buffer = Buffer.from(await res.arrayBuffer());
           const ext = path.extname(new URL(absoluteUrl).pathname) || guessExt(res.headers.get('content-type'));
           const localName = `${crypto.createHash('sha1').update(absoluteUrl).digest('hex')}${ext}`;
           fs.writeFileSync(path.join(assetsDir, localName), buffer);
           downloaded.set(absoluteUrl, localName);
         } catch {
-          continue; // asset unreachable — leave the original attr untouched below
+          continue; // asset unreachable (network error) — leave the original attr untouched below
         }
       }
 
