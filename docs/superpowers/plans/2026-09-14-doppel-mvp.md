@@ -26,16 +26,16 @@
 ## Task 1: Monorepo scaffolding + Prisma schema + DB client
 
 **Files:**
-- Create: `package.json` (root, workspaces: `core`, `mcp-server`, `web`, `renderer`)
+- Create: `package.json` (root, workspaces: `core` only for now — see Step 1)
 - Create: `tsconfig.base.json`
 - Create: `.gitignore`
 - Create: `core/package.json`, `core/tsconfig.json`
 - Create: `prisma/schema.prisma`
-- Create: `core/src/db.ts`
+- Create: `core/src/db.ts`, `core/src/index.ts`
 - Test: `core/src/db.test.ts`
 
 **Interfaces:**
-- Produces: `import { prisma } from '../db'` → a singleton `PrismaClient`; `CloneJob` model with fields `id, sourceUrl, brandName, niche, status, errorReason, colorPalette, copyChanges, logoSvg, previewPath, exportPath, createdAt, updatedAt` (all `String`/`String?`/`DateTime` per spec §4.2, `status` stored as plain string, no enum).
+- Produces: `import { prisma } from '../db'` → a singleton `PrismaClient`; `CloneJob` model with fields `id, sourceUrl, brandName, niche, status, errorReason, brandProfile, colorPalette, copyChanges, logoSvg, previewPath, exportPath, createdAt, updatedAt` (all `String`/`String?`/`DateTime` per spec §4.2, `status` stored as plain string, no enum; `brandProfile` holds the JSON `BrandProfile` Task 11 needs at apply-time).
 
 - [ ] **Step 1: Create root workspace config**
 
@@ -44,8 +44,9 @@
 {
   "name": "doppel",
   "private": true,
-  "workspaces": ["core", "mcp-server", "web", "renderer"],
+  "workspaces": ["core"],
   "scripts": {
+    "postinstall": "prisma generate --schema prisma/schema.prisma",
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
@@ -77,11 +78,14 @@
 ```
 node_modules/
 dist/
+core/generated/
 *.db
 *.db-journal
 .env
 /tmp-jobs/
 ```
+
+Only `core` is listed in `workspaces` for now — `mcp-server/`, `web/`, and `renderer/` don't exist on disk yet, and npm workspaces installs are unreliable when a listed workspace path is missing. Task 5 (`renderer`), Task 12 (`mcp-server`), and Task 15 (`web`) each add their own name to this array as their first step, right before creating their `package.json`.
 
 - [ ] **Step 2: Write the Prisma schema**
 
@@ -94,7 +98,11 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DOPPEL_DB_URL")
+  // Hardcoded on purpose: this is a fixed local-only dev database (spec §1 — Doppel has
+  // no hosted backend), not an environment-specific connection. An env()-based URL would need
+  // loading in every runtime that touches Prisma (Vitest, the MCP server, the Next.js app) —
+  // a literal path here needs no such wiring and can't throw "environment variable not found."
+  url      = "file:../doppel-dev.db"
 }
 
 model CloneJob {
@@ -206,8 +214,8 @@ describe('CloneJob DB', () => {
 Run:
 ```bash
 npm install
-DOPPEL_DB_URL="file:../doppel-dev.db" npx prisma migrate dev --name init --schema prisma/schema.prisma
-DOPPEL_DB_URL="file:../doppel-dev.db" npm test -w core
+npx prisma migrate dev --name init --schema prisma/schema.prisma
+npm test -w core
 ```
 Expected: `db.test.ts` passes (1 passed).
 
@@ -591,7 +599,9 @@ git commit -m "feat(core): multi-page same-domain crawl with robots.txt"
 - Consumes: `crawlSite` (Task 4) via the `@doppel/core` workspace package.
 - Produces: a CLI (`node dist/cli.js --url <url> --maxPages <n> --out <dir>`) that writes `<dir>/manifest.json` (`{ pages: [{ url, htmlPath, usedRenderer }] }`), one `.html` file per page under `<dir>/pages/` (rewritten to reference localized assets by relative path), and downloaded `<img>`/`<link rel=stylesheet>`/`<script src>` assets under `<dir>/assets/` — this is what lets the exported `.zip` and local preview render for real, offline, instead of pointing back at the original site. Exit code `0` on success, `1` on failure with an error message on stderr.
 
-- [ ] **Step 1: Create the renderer package**
+- [ ] **Step 1: Add `renderer` to the root workspaces array, then create the renderer package**
+
+In the root `package.json` (created in Task 1), change `"workspaces": ["core"]` to `"workspaces": ["core", "renderer"]` — `renderer/` doesn't exist yet, so it can't be listed until this step creates it.
 
 `renderer/package.json`:
 ```json
@@ -1788,7 +1798,9 @@ git commit -m "feat(core): pipeline orchestrator with status transitions and err
 
 The source `Documents/volk-signature-cmd/volk.ps1` renders via two parallel arrays — `$WolfRows` (the shape, ASCII noise characters) and `$WolfTones` (a same-length-and-shape string where each character is a palette digit `1`-`5`/`E`/space) — plus a `$Palette` map from tone digit to a 24-bit ANSI color escape, and a loop that groups consecutive same-tone runs per row and wraps each run in that color's escape + reset. This task ports that exact algorithm to Node with raw ANSI (no PowerShell shellout, so it works on macOS/Linux too), and copies the two data arrays verbatim from the source file.
 
-- [ ] **Step 1: Create the mcp-server package**
+- [ ] **Step 1: Add `mcp-server` to the root workspaces array, then create the mcp-server package**
+
+In the root `package.json`, change `"workspaces": ["core", "renderer"]` to `"workspaces": ["core", "renderer", "mcp-server"]`.
 
 `mcp-server/package.json`:
 ```json
@@ -1943,7 +1955,7 @@ node -e "require('./mcp-server/dist/banner.js').printBanner()"
 - [ ] **Step 7: Commit**
 
 ```bash
-git add mcp-server/package.json mcp-server/tsconfig.json mcp-server/src/banner.ts mcp-server/src/banner.test.ts
+git add package.json mcp-server/package.json mcp-server/tsconfig.json mcp-server/src/banner.ts mcp-server/src/banner.test.ts
 git commit -m "feat(mcp-server): port VOLK // BLACKGATE banner to portable Node/ANSI"
 ```
 
@@ -2320,7 +2332,9 @@ git commit -m "feat(mcp-server): tool handlers and stdio entrypoint"
 - Consumes: `runClonePipeline` (Task 11), `prisma` (Task 1).
 - Produces: `POST /api/clones` accepting `{ url, brandName, niche? }`, returning `{ jobId, status }`; `GET /api/clones` returning `{ jobs: CloneJob[] }`.
 
-- [ ] **Step 1: Scaffold the Next.js app**
+- [ ] **Step 1: Add `web` to the root workspaces array, then scaffold the Next.js app**
+
+In the root `package.json`, change `"workspaces": ["core", "renderer", "mcp-server"]` to `"workspaces": ["core", "renderer", "mcp-server", "web"]`.
 
 `web/package.json`:
 ```json
@@ -2527,7 +2541,7 @@ Expected: build succeeds with no type errors.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add web
+git add package.json web
 git commit -m "feat(web): dashboard with new-clone form and job history"
 ```
 
